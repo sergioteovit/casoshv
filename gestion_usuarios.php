@@ -8,11 +8,10 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] !== 'Administrador') {
     exit;
 }
 
-// Configuración de la BD
 $host = 'localhost';
-$dbname = 'casos_hv';
-$user = 'root';
-$pass = '';
+$dbname = 'myhvirtual';
+$user = 'myhvirtual';
+$pass = 'uPLtaPntlDJnThpf';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);

@@ -1,9 +1,9 @@
 <?php
-// PON AQUÍ TUS DATOS DE CONEXIÓN REALES
-$host = 'localhost'; 
-$dbname = 'casoshv';
-$user = 'root';
-$pass = '';
+
+$host = 'localhost';
+$dbname = 'myhvirtual';
+$user = 'myhvirtual';
+$pass = 'uPLtaPntlDJnThpf';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);

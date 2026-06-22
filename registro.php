@@ -8,9 +8,9 @@ if (isset($_SESSION['usuario_id'])) {
 }
 
 $host = 'localhost';
-$dbname = 'casoshv';
-$user = 'root';
-$pass = '';
+$dbname = 'myhvirtual';
+$user = 'myhvirtual';
+$pass = 'uPLtaPntlDJnThpf';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);

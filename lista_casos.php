@@ -7,11 +7,10 @@ if (!isset($_SESSION['usuario_id'])) {
 }
 $rolUsuario = $_SESSION['rol']; // 'Invitado', 'Editor', o 'Administrador'
 
-// Configuración de la Base de Datos
 $host = 'localhost';
-$dbname = 'casoshv';
-$user = 'root';
-$pass = '';
+$dbname = 'myhvirtual';
+$user = 'myhvirtual';
+$pass = 'uPLtaPntlDJnThpf';
 
 try {
     // Conexión usando PDO para máxima seguridad

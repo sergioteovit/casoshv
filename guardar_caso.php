@@ -3,11 +3,10 @@
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json; charset=utf-8');
 
-// 1. CONFIGURACIÓN DE TU BASE DE DATOS REMOTA
-$host = 'localhost'; // Ej: remotemysql.com o la IP de tu servidor
-$dbname = 'casoshv';
-$user = 'root';
-$pass = '';
+$host = 'localhost';
+$dbname = 'myhvirtual';
+$user = 'myhvirtual';
+$pass = 'uPLtaPntlDJnThpf';
 
 try {
     // Conexión usando PDO (seguro contra inyecciones SQL)
