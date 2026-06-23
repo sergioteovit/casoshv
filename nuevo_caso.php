@@ -1,3 +1,15 @@
+<?php
+session_start();
+
+// 1. SEGURIDAD: Si no está logueado o es un rol 'Invitado', bloquear acceso
+if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
+    // Los invitados no pueden crear casos, los regresamos al listado
+    header("Location: lista_casos.php");
+    exit;
+}
+
+$rolUsuario = $_SESSION['rol']; // Guardamos el rol ('Editor' o 'Administrador')
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -67,18 +79,72 @@
 </head>
 <body class="py-4 py-md-5">
 
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+      <div class="container">
+        <a class="navbar-brand" href="lista_casos.php">
+            <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Casos Clínicos
+        </a>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="lista_casos.php">Lista de Casos</a>
+            </li>
+            <?php if ($rolUsuario === 'Administrador'): ?>
+            <li class="nav-item">
+              <a class="nav-link" href="gestion_usuarios.php">Gestión de Usuarios</a>
+            </li>
+            <?php endif; ?>
+          </ul>
+
+          <div class="d-flex align-items-center text-white">
+              <span class="me-3 small">
+                  <i class="bi bi-person-circle text-primary me-1"></i> 
+                  <?= htmlspecialchars($_SESSION['nombre_completo']) ?> 
+                  <span class="badge bg-secondary ms-1"><?= $rolUsuario ?></span>
+              </span>
+              <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
+              <a href="logout.php" class="btn btn-sm btn-danger">Salir</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+    <div class="container my-4">
+    
 <div class="container main-container bg-white p-4 p-md-5 rounded-4 shadow-sm border">
     
     <div class="text-center mb-5">
         <h1 class="fw-bold text-primary mb-2">NUEVO CASO CLÍNICO</h1>
         <p class="text-muted">Formulario para la estandarización y recolección de casos médicos</p>
     </div>
+        
+    <?php if(isset($_GET['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>No se pudo guardar el caso</h5>
+            <p class="mb-0 small">Detalle del error del sistema: <code><?= htmlspecialchars($_GET['error']) ?></code></p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
 
     <form id="formulario-caso">
 
         <!-- INFORMACIÓN GENERAL -->
         <h2 class="section-title">INFORMACIÓN GENERAL</h2>
-        
+        <div class="mb-3">
+            <label class="form-label fw-bold">Identificador del Caso</label>
+            <input type="text" 
+                   name="identificador" 
+                   id="identificador" 
+                   class="form-control" 
+                   placeholder="<?= $rolUsuario === 'Administrador' ? 'Ej. MED-2026-001' : 'Asignado automáticamente por el sistema' ?>" 
+                   <?= $rolUsuario === 'Administrador' ? 'required' : 'disabled' ?>>
+
+            <?php if ($rolUsuario !== 'Administrador'): ?>
+                <div class="form-text text-muted small">
+                    <i class="bi bi-lock-fill text-warning me-1"></i> 
+                    Tu rol de <strong><?= $rolUsuario ?></strong> no tiene permisos para asignar o modificar el identificador manualmente.
+                </div>
+            <?php endif; ?>
+        </div>
         <div class="mb-3">
             <label class="form-label fw-bold">Título del Caso Clínico:</label>
             <input type="text" class="form-control" name="titulo_caso" placeholder="Ej. Paciente masculino de 45 años con dolor torácico" required>
@@ -148,9 +214,9 @@
                 </div>
             </div>
             <div class="col-md-3 mb-3 mb-md-0">
-                <label class="form-label fw-bold" for="edad_exacta">EDAD:</label>
+                <label class="form-label fw-bold" for="edad">EDAD:</label>
                 <div class="input-group">
-                    <input type="number" class="form-control" id="edad_exacta" name="edad_exacta" placeholder="Ej. 35" min="0" max="200">
+                    <input type="number" class="form-control" id="edad" name="edad" placeholder="Ej. 35" min="0" max="200">
                     <span class="input-group-text">años</span>
                 </div>
             </div>
@@ -190,17 +256,17 @@
         <div class="mb-4">
             <label class="form-label fw-bold">GRUPO DE EDAD (AÑOS):</label>
             <div class="row g-2">
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="<1" id="e1"><label class="form-check-label" for="e1">&lt;1</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="1 a 4" id="e2"><label class="form-check-label" for="e2">1 a 4</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="5 a 9" id="e3"><label class="form-check-label" for="e3">5 a 9</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="10 a 14" id="e4"><label class="form-check-label" for="e4">10 a 14</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="15 a 19" id="e5"><label class="form-check-label" for="e5">15 a 19</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="20 a 24" id="e6"><label class="form-check-label" for="e6">20 a 24</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="25 a 44" id="e7"><label class="form-check-label" for="e7">25 a 44</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="45 a 49" id="e8"><label class="form-check-label" for="e8">45 a 49</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="50 a 59" id="e9"><label class="form-check-label" for="e9">50 a 59</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="60 a 64" id="e10"><label class="form-check-label" for="e10">60 a 64</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value=">65" id="e11"><label class="form-check-label" for="e11">&gt;65</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="<1" id="e1"><label class="form-check-label" for="e1">&lt;1</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="1 a 4" id="e2"><label class="form-check-label" for="e2">1 a 4</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="5 a 9" id="e3"><label class="form-check-label" for="e3">5 a 9</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="10 a 14" id="e4"><label class="form-check-label" for="e4">10 a 14</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="15 a 19" id="e5"><label class="form-check-label" for="e5">15 a 19</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="20 a 24" id="e6"><label class="form-check-label" for="e6">20 a 24</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="25 a 44" id="e7"><label class="form-check-label" for="e7">25 a 44</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="45 a 49" id="e8"><label class="form-check-label" for="e8">45 a 49</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="50 a 59" id="e9"><label class="form-check-label" for="e9">50 a 59</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="60 a 64" id="e10"><label class="form-check-label" for="e10">60 a 64</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value=">65" id="e11"><label class="form-check-label" for="e11">&gt;65</label></div></div>
             </div>
         </div>
 
@@ -319,8 +385,8 @@
         <h2 class="section-title">PRESENTACIÓN DEL CASO</h2>
         
         <div class="mb-3">
-            <label for="vineta" class="form-label fw-bold">RESUMEN DEL CASO:</label>
-            <textarea class="form-control" id="vineta" name="vineta" rows="3" placeholder="Descripción general: Paciente (Masculino/Femenino) de (__) años de edad, acude a..."></textarea>
+            <label for="resumen" class="form-label fw-bold">RESUMEN DEL CASO:</label>
+            <textarea class="form-control" id="resumen" name="resumen" rows="3" placeholder="Descripción general: Paciente (Masculino/Femenino) de (__) años de edad, acude a..."></textarea>
         </div>
 
         <div class="mb-3">
@@ -582,15 +648,15 @@
             <label class="form-label fw-bold">TIPO DE INTERROGATORIO AL PACIENTE VIRTUAL:</label>
             <div class="d-flex flex-wrap gap-4 mt-1">
                 <div class="form-check">
-                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_directo" value="Interrogatorio directo">
-                    <label class="form-check-label" for="int_directo">Interrogatorio directo</label>
+                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_directo" value="direct">
+                    <label class="form-check-label" for="int_directo">Interrogatorio Directo</label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_indirecto" value="Interrogatorio indirecto">
-                    <label class="form-check-label" for="int_indirecto">Interrogatorio indirecto</label>
+                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_indirecto" value="indirect">
+                    <label class="form-check-label" for="int_indirecto">Interrogatorio Indirecto</label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_hibrido" value="Interrogatorio Híbrido">
+                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_hibrido" value="hybrid">
                     <label class="form-check-label" for="int_hibrido">Interrogatorio Híbrido</label>
                 </div>
             </div>
@@ -1165,6 +1231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const datosDelCaso = {};
         
         const btnSubmit = document.getElementById('btn-guardar');
+        const originalHTML = btnSubmit.innerHTML;
 
         // Recorremos los campos fijos y dinámicos presentes en el formulario de index.html
         for (let [key, value] of datosParaEnviar.entries()) {
@@ -1239,6 +1306,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     formulario.reset(); 
                     archivosLaboratorio = []; 
                     document.getElementById('lab-files-list').innerHTML = ''; 
+                    
+                    window.location.href = "lista_casos.php?msg=success";
                 }, 3000);
             } else {
                 alert("Error del servidor: " + data.message);

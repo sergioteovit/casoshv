@@ -1,7 +1,18 @@
 <?php
-// 1. Validar que exista un ID válido para editar
-if (!isset($_GET['id']) || empty($_GET['id'])) {
+
+session_start();
+
+// 1. SEGURIDAD: Bloquear si no está logueado o si es un rol 'Invitado'
+if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
     header("Location: lista_casos.php");
+    exit;
+}
+
+$rolUsuario = $_SESSION['rol'];
+
+// 2. VALIDAR ID: Verificar que llegue un ID válido por la URL
+if (!isset($_GET['id']) || empty($_GET['id'])) {
+    header("Location: lista_casos.php?error=no_id");
     exit;
 }
 
@@ -22,7 +33,8 @@ try {
     $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$resultado) {
-        die("El caso clínico solicitado no existe.");
+        header("Location: lista_casos.php?error=not_found");
+        exit;
     }
     
     // Guardamos el JSON de la BD para inyectarlo en el JS del formulario
@@ -103,15 +115,69 @@ try {
 
 <div class="container main-container bg-white p-4 p-md-5 rounded-4 shadow-sm border">
     
-    <div class="text-center mb-5">
-        <h1 class="fw-bold text-primary mb-2">PLANTILLA DE CASO CLÍNICO</h1>
-        <p class="text-muted">Formulario para la estandarización y recolección de casos médicos</p>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+      <div class="container">
+        <a class="navbar-brand" href="lista_casos.php">
+            <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Casos Clínicos
+        </a>
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="lista_casos.php">Lista de Casos</a>
+            </li>
+            <?php if ($rolUsuario === 'Administrador'): ?>
+            <li class="nav-item">
+              <a class="nav-link" href="gestion_usuarios.php">Gestión de Usuarios</a>
+            </li>
+            <?php endif; ?>
+          </ul>
+
+          <div class="d-flex align-items-center text-white">
+              <span class="me-3 small">
+                  <i class="bi bi-person-circle text-primary me-1"></i> 
+                  <?= htmlspecialchars($_SESSION['nombre_completo']) ?> 
+                  <span class="badge bg-secondary ms-1"><?= $rolUsuario ?></span>
+              </span>
+              <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
+              <a href="logout.php" class="btn btn-sm btn-danger">Salir</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-pencil-square text-warning me-2"></i>Editar Caso Clínico #<?= $id_caso ?></h2>
+        <a href="lista_casos.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Cancelar y Volver</a>
     </div>
+
+    <?php if(isset($_GET['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>No se pudieron guardar los cambios</h5>
+            <p class="mb-0 small">Detalle del error: <code><?= htmlspecialchars($_GET['error']) ?></code></p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
 
     <form id="formulario-caso">
 
         <!-- INFORMACIÓN GENERAL -->
         <h2 class="section-title">INFORMACIÓN GENERAL</h2>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Identificador del Caso</label>
+            <input type="text" 
+                   name="identificador" 
+                   id="identificador" 
+                   class="form-control" 
+                   placeholder="<?= $rolUsuario === 'Administrador' ? 'Ej. MED-2026-001' : 'Asignado automáticamente por el sistema' ?>" 
+                   <?= $rolUsuario === 'Administrador' ? 'required' : 'disabled' ?>>
+
+            <?php if ($rolUsuario !== 'Administrador'): ?>
+                <div class="form-text text-muted small">
+                    <i class="bi bi-lock-fill text-warning me-1"></i> 
+                    Tu rol de <strong><?= $rolUsuario ?></strong> no tiene permisos para asignar o modificar el identificador manualmente.
+                </div>
+            <?php endif; ?>
+        </div>
         
         <div class="mb-3">
             <label class="form-label fw-bold">Título del Caso Clínico:</label>
@@ -182,9 +248,9 @@ try {
                 </div>
             </div>
             <div class="col-md-3 mb-3 mb-md-0">
-                <label class="form-label fw-bold" for="edad_exacta">EDAD:</label>
+                <label class="form-label fw-bold" for="edad">EDAD:</label>
                 <div class="input-group">
-                    <input type="number" class="form-control" id="edad_exacta" name="edad_exacta" placeholder="Ej. 35" min="0" max="200">
+                    <input type="number" class="form-control" id="edad" name="edad" placeholder="Ej. 35" min="0" max="200">
                     <span class="input-group-text">años</span>
                 </div>
             </div>
@@ -224,17 +290,17 @@ try {
         <div class="mb-4">
             <label class="form-label fw-bold">GRUPO DE EDAD (AÑOS):</label>
             <div class="row g-2">
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="<1" id="e1"><label class="form-check-label" for="e1">&lt;1</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="1 a 4" id="e2"><label class="form-check-label" for="e2">1 a 4</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="5 a 9" id="e3"><label class="form-check-label" for="e3">5 a 9</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="10 a 14" id="e4"><label class="form-check-label" for="e4">10 a 14</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="15 a 19" id="e5"><label class="form-check-label" for="e5">15 a 19</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="20 a 24" id="e6"><label class="form-check-label" for="e6">20 a 24</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="25 a 44" id="e7"><label class="form-check-label" for="e7">25 a 44</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="45 a 49" id="e8"><label class="form-check-label" for="e8">45 a 49</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="50 a 59" id="e9"><label class="form-check-label" for="e9">50 a 59</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value="60 a 64" id="e10"><label class="form-check-label" for="e10">60 a 64</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="edad" value=">65" id="e11"><label class="form-check-label" for="e11">&gt;65</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="<1" id="e1"><label class="form-check-label" for="e1">&lt;1</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="1 a 4" id="e2"><label class="form-check-label" for="e2">1 a 4</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="5 a 9" id="e3"><label class="form-check-label" for="e3">5 a 9</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="10 a 14" id="e4"><label class="form-check-label" for="e4">10 a 14</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="15 a 19" id="e5"><label class="form-check-label" for="e5">15 a 19</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="20 a 24" id="e6"><label class="form-check-label" for="e6">20 a 24</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="25 a 44" id="e7"><label class="form-check-label" for="e7">25 a 44</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="45 a 49" id="e8"><label class="form-check-label" for="e8">45 a 49</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="50 a 59" id="e9"><label class="form-check-label" for="e9">50 a 59</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="60 a 64" id="e10"><label class="form-check-label" for="e10">60 a 64</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value=">65" id="e11"><label class="form-check-label" for="e11">&gt;65</label></div></div>
             </div>
         </div>
 
@@ -353,8 +419,8 @@ try {
         <h2 class="section-title">PRESENTACIÓN DEL CASO</h2>
         
         <div class="mb-3">
-            <label for="vineta" class="form-label fw-bold">RESUMEN DEL CASO:</label>
-            <textarea class="form-control" id="vineta" name="vineta" rows="3" placeholder="Descripción general: Paciente (Masculino/Femenino) de (__) años de edad, acude a..."></textarea>
+            <label for="resumen" class="form-label fw-bold">RESUMEN DEL CASO:</label>
+            <textarea class="form-control" id="resumen" name="resumen" rows="3" placeholder="Descripción general: Paciente (Masculino/Femenino) de (__) años de edad, acude a..."></textarea>
         </div>
 
         <div class="mb-3">
@@ -616,15 +682,15 @@ try {
             <label class="form-label fw-bold">TIPO DE INTERROGATORIO AL PACIENTE VIRTUAL:</label>
             <div class="d-flex flex-wrap gap-4 mt-1">
                 <div class="form-check">
-                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_directo" value="Interrogatorio directo">
-                    <label class="form-check-label" for="int_directo">Interrogatorio directo</label>
+                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_directo" value="direct">
+                    <label class="form-check-label" for="int_directo">Interrogatorio Directo</label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_indirecto" value="Interrogatorio indirecto">
-                    <label class="form-check-label" for="int_indirecto">Interrogatorio indirecto</label>
+                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_indirecto" value="indirect">
+                    <label class="form-check-label" for="int_indirecto">Interrogatorio Indirecto</label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_hibrido" value="Interrogatorio Híbrido">
+                    <input class="form-check-input border-primary" type="radio" name="tipo_interrogatorio" id="int_hibrido" value="hybrid">
                     <label class="form-check-label" for="int_hibrido">Interrogatorio Híbrido</label>
                 </div>
             </div>
@@ -883,11 +949,14 @@ try {
         </div>
 
         <hr class="my-5">
-
-        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" id="btn-guardar">
-            <i class="bi bi-cloud-arrow-up me-2"></i> GUARDAR CASO CLÍNICO
-        </button>
         
+        <div class="mt-4 pt-3 border-top d-flex justify-content-end">
+            <a href="lista_casos.php" class="btn btn-secondary me-2">Descartar Cambios</a>
+            <!--button type="submit" class="btn btn-warning fw-bold"><i class="bi bi-save me-1"></i> Guardar Cambios Actualizados</button-->
+            <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" id="btn-guardar">
+                <i class="bi bi-cloud-arrow-up me-2"></i> GUARDAR CAMBIOS
+            </button>
+        </div>
     </form>
 </div>
 
@@ -1201,6 +1270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const datosDelCaso = {};
         
         const btnSubmit = document.getElementById('btn-guardar');
+        const originalHTML = btnSubmit.innerHTML;
 
         // Aplicamos la misma lógica estructurada exacta del index.html para compilar los datos limpios
         for (let [key, value] of datosParaEnviar.entries()) {
@@ -1253,7 +1323,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if(data.status === 'success') {
                 btnSubmit.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> ¡Cambios guardados!';
                 setTimeout(() => {
-                    window.location.href = 'lista_casos.php'; // Redirección automática al panel de control
+                    // window.location.href = 'lista_casos.php'; // Redirección automática al panel de control
+                    window.location.href = "lista_casos.php?msg=updated";
                 }, 2000);
             } else {
                 alert("Error en la actualización: " + data.message);

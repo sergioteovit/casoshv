@@ -105,7 +105,7 @@ $totalCasos = count($casos);
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-folder-fill text-primary me-2"></i> Panel de Casos Clínicos</h2>
         <?php if ($rolUsuario !== 'Invitado'): ?>
-            <a href="nuevo_caso.php" class="btn btn-success" target="_blank"><i class="bi bi-plus-circle me-1"></i> Nuevo Caso</a>
+            <a href="nuevo_caso.php" class="btn btn-success"><i class="bi bi-plus-circle me-1"></i> Nuevo Caso</a>
         <?php endif; ?>
     </div>
 
@@ -124,6 +124,18 @@ $totalCasos = count($casos);
             </div>
         </div>
         </div>
+    <?php if(isset($_GET['msg']) && $_GET['msg'] == 'updated'): ?>
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="bi bi-pencil-square me-2"></i> ¡El caso clínico ha sido actualizado correctamente en el sistema!
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+    <?php if(isset($_GET['msg']) && $_GET['msg'] == 'success'): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> ¡El nuevo caso clínico ha sido registrado y guardado con éxito!
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
     <?php if(isset($_GET['msg']) && $_GET['msg'] == 'deleted'): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             El caso clínico ha sido eliminado correctamente de la base de datos.
@@ -143,11 +155,12 @@ $totalCasos = count($casos);
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
-                        <th class="ps-3" style="width: 8%">ID</th>
-                        <th style="width: 37%">Título del Caso</th>
-                        <th style="width: 23%">Autores</th>
-                        <th style="width: 15%">Fecha de Registro</th>
-                        <th class="text-center" style="width: 17%">Acciones</th>
+                        <!--th class="ps-3" style="width: 5%">IDBD</!--th-->
+                        <th class="ps-3" style="width: 10%">Identificador</th>
+                        <th style="width: 40%">Descripción</th>
+                        <th style="width: 20%">Autores</th>
+                        <th style="width: 10%">Fecha de Registro</th>
+                        <th class="text-center" style="width: 20%">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -159,6 +172,8 @@ $totalCasos = count($casos);
                         <?php foreach($casos as $row): 
                             // Decodificamos el JSON guardado de la BD
                             $datos = json_decode($row['datos_completos'], true);
+                    
+                            $identificador = isset($datos['identificador']) ? $datos['identificador'] : 'Desconocido';
                             
                             // Extraer el título del caso de manera segura
                             $titulo = isset($datos['titulo_caso']) ? htmlspecialchars($datos['titulo_caso']) : 'Sin título';
@@ -184,7 +199,12 @@ $totalCasos = count($casos);
                             }
                         ?>
                             <tr>
-                                <td class="ps-3 fw-bold"><?= $row['id'] ?></td>
+                                <!--td class="ps-3 fw-bold"><?= $row['id'] ?></!--td-->
+                                <td>
+                                    <span class="badge bg-primary">
+                                        <?= htmlspecialchars($identificador) ?>
+                                    </span>
+                                </td>
                                 <td>
                                     <div class="fw-semibold text-secondary text-wrap"><?= $titulo ?></div>
                                 </td>
@@ -198,11 +218,14 @@ $totalCasos = count($casos);
                                     <div class="btn-group" role="group">
                                         <button type="button" 
                                                 class="btn btn-sm btn-outline-info btn-descargar-json" 
-                                                data-titulo="<?= pathinfo($titulo, PATHINFO_FILENAME); ?>"
+                                                data-titulo="<?= pathinfo($identificador, PATHINFO_FILENAME); ?>"
                                                 data-json='<?= htmlspecialchars($row['datos_completos'], ENT_QUOTES, 'UTF-8'); ?>'
                                                 title="Descargar JSON del Caso">
                                             <i class="bi bi-download"></i> JSON
                                         </button>
+                                        <a href="descargar_xml.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-info" title="Descargar XML">
+                                            <i class="bi bi-filetype-xml"></i> XML
+                                        </a>
                                         <?php if ($rolUsuario !== 'Invitado'): ?>
                                             <a href="caso_editar.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-warning">
                                                 <i class="bi bi-pencil-square"></i> Editar
