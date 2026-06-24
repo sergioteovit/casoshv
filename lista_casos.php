@@ -87,6 +87,11 @@ $totalCasos = count($casos);
         <li class="nav-item">
           <a class="nav-link" href="gestion_usuarios.php">Gestión de Usuarios</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link text-warning" href="verificador_casos.php">
+                <i class="bi bi-ui-checks-grid me-1"></i> Auditoría de Variables
+            </a>
+        </li>
         <?php endif; ?>
       </ul>
       <div class="d-flex align-items-center text-white">

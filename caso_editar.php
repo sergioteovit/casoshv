@@ -286,7 +286,10 @@ try {
                 <input type="text" class="form-control mt-2 d-none" id="padecimiento-otro-texto" name="padecimiento_otro_texto" placeholder="Especificar padecimiento...">
             </div>
         </div>
-
+        <div class="mb-3">
+            <label class="form-label fw-bold">Residencia:</label>
+            <input type="text" class="form-control" name="residencia" placeholder="Ej. Ciudad de México">
+        </div>
         <div class="mb-4">
             <label class="form-label fw-bold">GRUPO DE EDAD (AÑOS):</label>
             <div class="row g-2">
