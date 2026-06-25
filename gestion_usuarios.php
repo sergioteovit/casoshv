@@ -20,6 +20,41 @@ try {
     die("Error de conexión a la Base de Datos: " . $e->getMessage());
 }
 
+// =================================================================
+// NUEVO: PROCESAR CAMBIO DE ROL ASÍNCRONO (AJAX/FETCH)
+// =================================================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'cambiar_rol') {
+    // Configuramos cabecera JSON para la respuesta asíncrona
+    header('Content-Type: application/json; charset=utf-8');
+    
+    $idUsuario = isset($_POST['id_usuario']) ? intval($_POST['id_usuario']) : 0;
+    $nuevoRol = isset($_POST['nuevo_rol']) ? trim($_POST['nuevo_rol']) : '';
+    
+    // Validar los roles permitidos
+    $rolesPermitidos = ['Invitado', 'Editor', 'Administrador'];
+    
+    if ($idUsuario === 0 || !in_array($nuevoRol, $rolesPermitidos)) {
+        echo json_encode(['status' => 'error', 'message' => 'Datos inválidos.']);
+        exit;
+    }
+    
+    // Evitar que el administrador se quite el rol a sí mismo por accidente
+    if ($idUsuario === intval($_SESSION['usuario_id']) && $nuevoRol !== 'Administrador') {
+        echo json_encode(['status' => 'error', 'message' => 'No puedes cambiar tu propio rol de Administrador para evitar perder el acceso al sistema.']);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("UPDATE usuarios SET rol = :rol WHERE id = :id");
+        $stmt->execute([':rol' => $nuevoRol, ':id' => $idUsuario]);
+        
+        echo json_encode(['status' => 'success', 'message' => 'Rol actualizado correctamente.']);
+    } catch (PDOException $e) {
+        echo json_encode(['status' => 'error', 'message' => 'Error en la base de datos: ' . $e->getMessage()]);
+    }
+    exit; // Detener la ejecución para que no renderice el HTML en la petición AJAX
+}
+
 // --- PROCESAR CREACIÓN DE NUEVO USUARIO (Por el Administrador) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] == 'crear') {
     $nuevoUsuario = trim($_POST['usuario']);
@@ -64,6 +99,7 @@ if (isset($_GET['eliminar'])) {
 // Obtener la lista de usuarios
 $stmt = $pdo->query("SELECT id, usuario, rol, nombre, apellidos, correo, fecha_creacion FROM usuarios ORDER BY fecha_creacion DESC");
 $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -110,6 +146,8 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php if(isset($_GET['msg']) && $_GET['msg'] == 'deleted'): ?>
         <div class="alert alert-success alert-dismissible fade show">Usuario eliminado correctamente.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
+    
+    <div id="contenedor-alerta"></div>
 
     <div class="card shadow-sm">
         <div class="card-body p-0">
@@ -132,20 +170,19 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <td><code><?= htmlspecialchars($user['usuario']) ?></code></td>
                         <td><?= htmlspecialchars($user['correo']) ?></td>
                         <td>
-                            <?php 
-                                $badgeClass = 'bg-secondary'; // Invitado
-                                if($user['rol'] == 'Administrador') $badgeClass = 'bg-danger';
-                                if($user['rol'] == 'Editor') $badgeClass = 'bg-success';
-                            ?>
-                            <span class="badge <?= $badgeClass ?>"><?= $user['rol'] ?></span>
+                            <select class="form-select form-select-sm select-cambio-rol fw-medium" 
+                                    data-usuario-id="<?= $user['id'] ?>"
+                                    style="border-left: 4px solid <?= $user['rol'] === 'Administrador' ? '#dc3545' : ($user['rol'] === 'Editor' ? '#ffc107' : '#6c757d') ?>;">
+                                <option value="Invitado" <?= $user['rol'] === 'Invitado' ? 'selected' : '' ?>>Invitado (Lectura)</option>
+                                <option value="Editor" <?= $user['rol'] === 'Editor' ? 'selected' : '' ?>>Editor (Escritura)</option>
+                                <option value="Administrador" <?= $user['rol'] === 'Administrador' ? 'selected' : '' ?>>Administrador (Total)</option>
+                            </select>
                         </td>
                         <td class="text-center">
-                            <?php if($user['id'] !== $_SESSION['usuario_id']): ?>
-                            <a href="gestion_usuarios.php?eliminar=<?= $user['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro que deseas eliminar este usuario del sistema?');">
-                                <i class="bi bi-trash"></i> Eliminar
-                            </a>
-                            <?php else: ?>
-                            <span class="text-muted small">Tu cuenta actual</span>
+                            <?php if ($user['id'] !== $_SESSION['usuario_id']): ?>
+                                <a href="eliminar_usuario.php?id=<?= $user['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar usuario?');">
+                                    <i class="bi bi-trash"></i>
+                                </a>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -213,5 +250,84 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const selectsRol = document.querySelectorAll('.select-cambio-rol');
+    const contenedorAlerta = document.getElementById('contenedor-alerta');
+
+    selectsRol.forEach(select => {
+        // Guardamos el valor original por si ocurre un error y necesitamos restaurarlo
+        let valorAnterior = select.value;
+
+        select.addEventListener('change', function() {
+            const idUsuario = this.getAttribute('data-usuario-id');
+            const nuevoRol = this.value;
+            const selectElement = this;
+
+            // Bloquear el select temporalmente mientras se guarda
+            selectElement.disabled = true;
+
+            // Preparar los datos del formulario
+            const formData = new FormData();
+            formData.append('accion', 'cambiar_rol');
+            formData.append('id_usuario', idUsuario);
+            formData.append('nuevo_rol', nuevoRol);
+
+            // Enviar petición al mismo archivo gestion_usuarios.php
+            fetch('gestion_usuarios.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Cambiar el color del borde izquierdo de forma dinámica según el nuevo rol
+                    if (nuevoRol === 'Administrador') selectElement.style.borderLeft = '4px solid #dc3545';
+                    else if (nuevoRol === 'Editor') selectElement.style.borderLeft = '4px solid #ffc107';
+                    else selectElement.style.borderLeft = '4px solid #6c757d';
+
+                    // Mostrar notificación flotante de éxito
+                    mostrarNotificacion('success', data.message);
+                    valorAnterior = nuevoRol; // Actualizar el respaldo
+                } else {
+                    // Mostrar error y revertir el select al rol que tenía antes
+                    mostrarNotificacion('danger', data.message);
+                    selectElement.value = valorAnterior;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarNotificacion('danger', 'No se pudo conectar con el servidor.');
+                selectElement.value = valorAnterior;
+            })
+            .finally(() => {
+                // Desbloquear el select
+                selectElement.disabled = false;
+            });
+        });
+    });
+
+    // Función auxiliar para pintar alertas de Bootstrap temporales
+    function mostrarNotificacion(tipo, mensaje) {
+        contenedorAlerta.innerHTML = `
+            <div class="alert alert-${tipo} alert-dismissible fade show shadow-sm d-flex align-items-center" role="alert">
+                <i class="bi ${tipo === 'success' ? 'bi-check-circle-fill me-2' : 'bi-exclamation-triangle-fill me-2'}"></i>
+                <div>${mensaje}</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        // Auto-eliminar la alerta después de 4 segundos
+        setTimeout(() => {
+            const alerta = contenedorAlerta.querySelector('.alert');
+            if (alerta) {
+                const bsAlert = new bootstrap.Alert(alerta);
+                bsAlert.close();
+            }
+        }, 4000);
+    }
+});
+</script>
+    
 </body>
 </html>

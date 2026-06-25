@@ -162,8 +162,9 @@ $totalCasos = count($casos);
                     <tr>
                         <!--th class="ps-3" style="width: 5%">IDBD</!--th-->
                         <th class="ps-3" style="width: 10%">Identificador</th>
-                        <th style="width: 40%">Descripción</th>
-                        <th style="width: 20%">Autores</th>
+                        <th style="width: 30%">Descripción</th>
+                        <th style="width: 15%">Departamentos</th>
+                        <th style="width: 15%">Autores</th>
                         <th style="width: 10%">Fecha de Registro</th>
                         <th class="text-center" style="width: 20%">Acciones</th>
                     </tr>
@@ -202,6 +203,12 @@ $totalCasos = count($casos);
                             if (empty($listaAutoresHTML)) {
                                 $listaAutoresHTML = '<span class="text-muted italic small">No especificados</span>';
                             }
+                    
+                            // Extraer el departamento (y definir un mensaje de respaldo si está vacío)
+                            $departamentos = isset($datos['departamentos']) ? $datos['departamentos'] : null;
+                            if (empty($departamentos)) {
+                                $departamentos = isset($datos['departamento']) ? $datos['departamento'] : 'No asignado';
+                            }
                         ?>
                             <tr>
                                 <!--td class="ps-3 fw-bold"><?= $row['id'] ?></!--td-->
@@ -214,6 +221,15 @@ $totalCasos = count($casos);
                                     <div class="fw-semibold text-secondary text-wrap"><?= $titulo ?></div>
                                 </td>
                                 <td>
+                                    <?php if (is_array($departamentos)): ?>
+                                        <?php foreach ($departamentos as $dep): ?>
+                                            <span class="badge bg-secondary me-1"><?= htmlspecialchars($dep) ?></span>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <span class="text-dark fw-medium"><?= htmlspecialchars($departamentos) ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <div class="d-flex flex-wrap">
                                         <?= $listaAutoresHTML ?>
                                     </div>
@@ -221,6 +237,9 @@ $totalCasos = count($casos);
                                 <td class="text-muted"><?= date('d/m/Y H:i', strtotime($row['fecha_registro'])) ?></td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
+                                        <a href="ver_caso.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver detalle completo del caso">
+                                            <i class="bi bi-eye"></i> Ver
+                                        </a>
                                         <button type="button" 
                                                 class="btn btn-sm btn-outline-info btn-descargar-json" 
                                                 data-titulo="<?= pathinfo($identificador, PATHINFO_FILENAME); ?>"
@@ -235,6 +254,8 @@ $totalCasos = count($casos);
                                             <a href="caso_editar.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-warning">
                                                 <i class="bi bi-pencil-square"></i> Editar
                                             </a>
+                                        <?php endif; ?>
+                                        <?php if ($rolUsuario !== 'Invitado' && $rolUsuario !== 'Editor'): ?>
                                             <a href="lista_casos.php?eliminar=<?= $row['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro?');">
                                                 <i class="bi bi-trash"></i> Eliminar
                                             </a>

@@ -3,7 +3,7 @@
 session_start();
 
 // 1. SEGURIDAD: Bloquear si no está logueado o si es un rol 'Invitado'
-if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
+if (!isset($_SESSION['usuario_id'])) {
     header("Location: lista_casos.php");
     exit;
 }
@@ -146,8 +146,8 @@ try {
     </nav>
     
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2><i class="bi bi-pencil-square text-warning me-2"></i>Editar Caso Clínico #<?= $id_caso ?></h2>
-        <a href="lista_casos.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Cancelar y Volver</a>
+        <h2><i class="bi bi-pencil-square text-warning me-2"></i>Caso Clínico</h2>
+        <a href="lista_casos.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Volver al listado</a>
     </div>
 
     <?php if(isset($_GET['error'])): ?>
@@ -162,55 +162,57 @@ try {
 
         <!-- INFORMACIÓN GENERAL -->
         <h2 class="section-title">INFORMACIÓN GENERAL</h2>
+        <div id="bloquePresentaCaso">
         <div class="mb-3">
             <label class="form-label fw-bold">Identificador del Caso</label>
             <input type="text" 
                    name="identificador" 
                    id="identificador" 
                    class="form-control" 
-                   placeholder="<?= $rolUsuario === 'Administrador' ? 'Ej. MED-2026-001' : 'Asignado automáticamente por el sistema' ?>">
+                   placeholder="<?= $rolUsuario === 'Administrador' ? 'Ej. MED-2026-001' : 'Asignado automáticamente por el sistema' ?>" 
+                   <?= $rolUsuario === 'Administrador' ? 'required' : 'disabled' ?> disabled>
 
             <?php if ($rolUsuario !== 'Administrador'): ?>
                 <div class="form-text text-muted small">
                     <i class="bi bi-lock-fill text-warning me-1"></i> 
-                    <strong><?= $rolUsuario ?></strong>: Preguntar al administrador sobre la edición de este valor.
+                    Tu rol de <strong><?= $rolUsuario ?></strong> no tiene permisos para asignar o modificar el identificador manualmente.
                 </div>
             <?php endif; ?>
         </div>
         
         <div class="mb-3">
             <label class="form-label fw-bold">Título del Caso Clínico:</label>
-            <input type="text" class="form-control" name="titulo_caso" placeholder="Ej. Paciente masculino de 45 años con dolor torácico" required>
+            <input type="text" class="form-control" name="titulo_caso" placeholder="Ej. Paciente masculino de 45 años con dolor torácico" disabled>
         </div>
         
         <div class="mb-4">
             <label class="form-label fw-bold">DEPARTAMENTO(S) QUE ELABORA(N) EL CASO:</label>
             <div class="row g-2">
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Departamento de Anatomía" id="dep1"><label class="form-check-label" for="dep1">Departamento de Anatomía</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Biología Celular y Tisular" id="dep2"><label class="form-check-label" for="dep2">Biología Celular y Tisular</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Bioquímica" id="dep3"><label class="form-check-label" for="dep3">Bioquímica</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Embriología y Genética" id="dep4"><label class="form-check-label" for="dep4">Embriología y Genética</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Farmacología" id="dep5"><label class="form-check-label" for="dep5">Farmacología</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Fisiología" id="dep6"><label class="form-check-label" for="dep6">Fisiología</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Microbiología y Parasitología" id="dep7"><label class="form-check-label" for="dep7">Microbiología y Parasitología</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Salud Pública" id="dep8"><label class="form-check-label" for="dep8">Salud Pública</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Departamento de Cirugía" id="dep9"><label class="form-check-label" for="dep9">Departamento de Cirugía</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Historia y Filosofía de la Medicina" id="dep10"><label class="form-check-label" for="dep10">Historia y Filosofía de la Medicina</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Innovación en Material Biológico Humano" id="dep11"><label class="form-check-label" for="dep11">Innovación en Material Biológico Humano</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Integración de Ciencias Médicas" id="dep12"><label class="form-check-label" for="dep12">Integración de Ciencias Médicas</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Psiquiatría y Salud Mental" id="dep13"><label class="form-check-label" for="dep13">Psiquiatría y Salud Mental</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Salud Digital" id="dep14"><label class="form-check-label" for="dep14">Salud Digital</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Áreas de Enseñanza y Servicio Social" id="dep15"><label class="form-check-label" for="dep15">Áreas de Enseñanza y Servicio Social</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Coordinación de Ciencias Básicas" id="dep16"><label class="form-check-label" for="dep16">Coordinación de Ciencias Básicas</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="SECISS" id="dep17"><label class="form-check-label" for="dep17">SECISS</label></div></div>
-                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="SEM" id="dep18"><label class="form-check-label" for="dep18">SEM</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Departamento de Anatomía" id="dep1" disabled><label class="form-check-label" for="dep1">Departamento de Anatomía</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Biología Celular y Tisular" id="dep2" disabled><label class="form-check-label" for="dep2">Biología Celular y Tisular</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Bioquímica" id="dep3" disabled><label class="form-check-label" for="dep3">Bioquímica</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Embriología y Genética" id="dep4" disabled><label class="form-check-label" for="dep4">Embriología y Genética</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Farmacología" id="dep5" disabled><label class="form-check-label" for="dep5">Farmacología</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Fisiología" id="dep6" disabled><label class="form-check-label" for="dep6">Fisiología</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Microbiología y Parasitología" id="dep7" disabled><label class="form-check-label" for="dep7">Microbiología y Parasitología</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Salud Pública" id="dep8" disabled><label class="form-check-label" for="dep8">Salud Pública</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Departamento de Cirugía" id="dep9" disabled><label class="form-check-label" for="dep9">Departamento de Cirugía</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Historia y Filosofía de la Medicina" id="dep10" disabled><label class="form-check-label" for="dep10">Historia y Filosofía de la Medicina</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Innovación en Material Biológico Humano" id="dep11" disabled><label class="form-check-label" for="dep11">Innovación en Material Biológico Humano</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Integración de Ciencias Médicas" id="dep12" disabled><label class="form-check-label" for="dep12">Integración de Ciencias Médicas</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Psiquiatría y Salud Mental" id="dep13" disabled><label class="form-check-label" for="dep13">Psiquiatría y Salud Mental</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Salud Digital" id="dep14" disabled><label class="form-check-label" for="dep14">Salud Digital</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Áreas de Enseñanza y Servicio Social" id="dep15" disabled><label class="form-check-label" for="dep15">Áreas de Enseñanza y Servicio Social</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="Coordinación de Ciencias Básicas" id="dep16" disabled><label class="form-check-label" for="dep16">Coordinación de Ciencias Básicas</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="SECISS" id="dep17" disabled><label class="form-check-label" for="dep17">SECISS</label></div></div>
+                <div class="col-md-6 col-lg-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="departamentos" value="SEM" id="dep18" disabled><label class="form-check-label" for="dep18">SEM</label></div></div>
                 
                 <div class="col-12 mt-2 d-flex align-items-center gap-3">
                     <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="checkbox-otro" name="departamentos_19" value="Otro">
+                        <input class="form-check-input" type="checkbox" id="checkbox-otro" name="departamentos_19" value="Otro" disabled>
                         <label class="form-check-label fw-bold" for="checkbox-otro">Otro</label>
                     </div>
-                    <input type="text" class="form-control form-control-sm w-50 d-none" id="departamento-otro-texto" name="departamento_otro_texto" placeholder="Especificar departamento...">
+                    <input type="text" class="form-control form-control-sm w-50 d-none" id="departamento-otro-texto" name="departamento_otro_texto" placeholder="Especificar departamento..." disabled>
                 </div>
             </div>
         </div>
@@ -220,7 +222,7 @@ try {
             <div id="autores-container">
                 <div class="input-group mb-2 autor-input-group">
                     <span class="input-group-text"><i class="bi bi-person"></i></span>
-                    <input type="text" class="form-control" name="autores" placeholder="Nombre completo del autor">
+                    <input type="text" class="form-control" name="autores" placeholder="Nombre completo del autor" disabled>
                     <button class="btn btn-outline-danger btn-remove" type="button" title="Eliminar autor"><i class="bi bi-trash btn-remove"></i></button>
                 </div>
             </div>
@@ -237,11 +239,11 @@ try {
                 <label class="form-label fw-bold">SEXO:</label>
                 <div class="d-flex gap-3 mt-1">
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="sexo" id="sexo_m" value="Masculino">
+                        <input class="form-check-input" type="radio" name="sexo" id="sexo_m" value="Masculino" disabled>
                         <label class="form-check-label" for="sexo_m">Masculino</label>
                     </div>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="sexo" id="sexo_f" value="Femenino">
+                        <input class="form-check-input" type="radio" name="sexo" id="sexo_f" value="Femenino" disabled>
                         <label class="form-check-label" for="sexo_f">Femenino</label>
                     </div>
                 </div>
@@ -249,13 +251,13 @@ try {
             <div class="col-md-3 mb-3 mb-md-0">
                 <label class="form-label fw-bold" for="edad">EDAD:</label>
                 <div class="input-group">
-                    <input type="number" class="form-control" id="edad" name="edad" placeholder="Ej. 35" min="0" max="200">
+                    <input type="number" class="form-control" id="edad" name="edad" placeholder="Ej. 35" min="0" max="200" disabled>
                     <span class="input-group-text">años</span>
                 </div>
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-bold" for="padecimiento">PADECIMIENTO:</label>
-                <select class="form-select" id="padecimiento" name="padecimiento">
+                <select class="form-select" id="padecimiento" name="padecimiento" disabled>
                     <option value="" selected disabled>-- Selecciona una opción --</option>
                     <option value="Infecciones respiratorias agudas">Infecciones respiratorias agudas</option>
                     <option value="Úlceras, gastritis y duodenitis">Úlceras, gastritis y duodenitis</option>
@@ -282,52 +284,52 @@ try {
                     <option value="Depresión">Depresión</option>
                     <option value="Otro">Otro (Especificar)</option>
                 </select>
-                <input type="text" class="form-control mt-2 d-none" id="padecimiento-otro-texto" name="padecimiento_otro_texto" placeholder="Especificar padecimiento...">
+                <input type="text" class="form-control mt-2 d-none" id="padecimiento-otro-texto" name="padecimiento_otro_texto" placeholder="Especificar padecimiento..." disabled>
             </div>
         </div>
         <div class="mb-3">
             <label class="form-label fw-bold">Residencia:</label>
-            <input type="text" class="form-control" name="residencia" placeholder="Ej. Ciudad de México">
+            <input type="text" class="form-control" name="residencia" placeholder="Ej. Ciudad de México" disabled>
         </div>
         <div class="mb-4">
             <label class="form-label fw-bold">GRUPO DE EDAD (AÑOS):</label>
             <div class="row g-2">
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="<1" id="e1"><label class="form-check-label" for="e1">&lt;1</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="1 a 4" id="e2"><label class="form-check-label" for="e2">1 a 4</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="5 a 9" id="e3"><label class="form-check-label" for="e3">5 a 9</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="10 a 14" id="e4"><label class="form-check-label" for="e4">10 a 14</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="15 a 19" id="e5"><label class="form-check-label" for="e5">15 a 19</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="20 a 24" id="e6"><label class="form-check-label" for="e6">20 a 24</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="25 a 44" id="e7"><label class="form-check-label" for="e7">25 a 44</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="45 a 49" id="e8"><label class="form-check-label" for="e8">45 a 49</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="50 a 59" id="e9"><label class="form-check-label" for="e9">50 a 59</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="60 a 64" id="e10"><label class="form-check-label" for="e10">60 a 64</label></div></div>
-                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value=">65" id="e11"><label class="form-check-label" for="e11">&gt;65</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="<1" id="e1" disabled><label class="form-check-label" for="e1">&lt;1</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="1 a 4" id="e2" disabled><label class="form-check-label" for="e2">1 a 4</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="5 a 9" id="e3" disabled><label class="form-check-label" for="e3">5 a 9</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="10 a 14" id="e4" disabled><label class="form-check-label" for="e4">10 a 14</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="15 a 19" id="e5" disabledaccesskey="" disabled><label class="form-check-label" for="e5">15 a 19</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="20 a 24" id="e6" disabled><label class="form-check-label" for="e6">20 a 24</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="25 a 44" id="e7" disabled><label class="form-check-label" for="e7">25 a 44</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="45 a 49" id="e8" disabled><label class="form-check-label" for="e8">45 a 49</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="50 a 59" id="e9" disabled><label class="form-check-label" for="e9">50 a 59</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value="60 a 64" id="e10" disabled><label class="form-check-label" for="e10">60 a 64</label></div></div>
+                <div class="col-auto"><div class="form-check"><input class="form-check-input" type="radio" name="rango_edad" value=">65" id="e11" disabled><label class="form-check-label" for="e11">&gt;65</label></div></div>
             </div>
         </div>
 
         <div class="mb-4">
             <label class="form-label fw-bold">SISTEMA(S) ANATÓMICO(S) PRINCIPAL(ES) INVOLUCRADO(S):</label>
             <div class="row g-2">
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Circulatorio" id="s1"><label class="form-check-label" for="s1">Circulatorio</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Digestivo" id="s2"><label class="form-check-label" for="s2">Digestivo</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Endócrino" id="s3"><label class="form-check-label" for="s3">Endócrino</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Linfático e inmunológico" id="s4"><label class="form-check-label" for="s4">Linfático e inmunológico</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Muscular" id="s5"><label class="form-check-label" for="s5">Muscular</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Nervioso" id="s6"><label class="form-check-label" for="s6">Nervioso</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Óseo" id="s7"><label class="form-check-label" for="s7">Óseo</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Reproductor femenino" id="s8"><label class="form-check-label" for="s8">Reproductor femenino</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Reproductor masculino" id="s9"><label class="form-check-label" for="s9">Reproductor masculino</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Respiratorio" id="s10"><label class="form-check-label" for="s10">Respiratorio</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Tegumentario" id="s11"><label class="form-check-label" for="s11">Tegumentario</label></div></div>
-                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Urinario" id="s12"><label class="form-check-label" for="s12">Urinario</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Circulatorio" id="s1" disabled><label class="form-check-label" for="s1">Circulatorio</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Digestivo" id="s2" disabled><label class="form-check-label" for="s2">Digestivo</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Endócrino" id="s3" disabled><label class="form-check-label" for="s3">Endócrino</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Linfático e inmunológico" id="s4" disabled><label class="form-check-label" for="s4">Linfático e inmunológico</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Muscular" id="s5" disabled><label class="form-check-label" for="s5">Muscular</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Nervioso" id="s6" disabled><label class="form-check-label" for="s6">Nervioso</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Óseo" id="s7" disabled><label class="form-check-label" for="s7">Óseo</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Reproductor femenino" id="s8" disabled><label class="form-check-label" for="s8">Reproductor femenino</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Reproductor masculino" id="s9" disabled><label class="form-check-label" for="s9">Reproductor masculino</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Respiratorio" id="s10" disabled><label class="form-check-label" for="s10">Respiratorio</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Tegumentario" id="s11" disabled><label class="form-check-label" for="s11">Tegumentario</label></div></div>
+                <div class="col-md-4 col-sm-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="sistemas_anatomicos" value="Urinario" id="s12" disabled><label class="form-check-label" for="s12">Urinario</label></div></div>
             </div>
         </div>
 
         <!-- ASIGNATURAS RELACIONADAS -->
         <h2 class="section-title">ASIGNATURA(S) RELACIONADA(S) AL CASO</h2>
         
-        <div class="row g-4 mb-4">
+        <div class="row g-4 mb-4" id="bloqueAsignaturas">
             <!-- Primer Año -->
             <div class="col-md-6">
                 <div class="p-3 bg-light border rounded">
@@ -460,7 +462,8 @@ try {
             <label for="diagnostico_tratamiento" class="form-label fw-bold">Diagnóstico, Tratamiento y seguimiento:</label>
             <textarea class="form-control" id="diagnostico_tratamiento" name="diagnostico_tratamiento" rows="3"></textarea>
         </div>
-
+        
+            
         <!-- DIAGNÓSTICOS DIFERENCIALES (Dinámico) -->
         <h2 class="section-title">DIAGNÓSTICOS DIFERENCIALES</h2>
         
@@ -951,16 +954,12 @@ try {
         </div>
 
         <hr class="my-5">
+            </div>
         
         <div class="mt-4 pt-3 border-top d-flex justify-content-end">
-            <a href="lista_casos.php" class="btn btn-secondary me-2">Descartar Cambios</a>
-            <!--button type="submit" class="btn btn-warning fw-bold"><i class="bi bi-save me-1"></i> Guardar Cambios Actualizados</button-->
-            <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" id="btn-guardar">
-                <i class="bi bi-cloud-arrow-up me-2"></i> GUARDAR CAMBIOS
-            </button>
+            <a href="lista_casos.php" class="btn btn-secondary me-2">REGRESAR A LISTA DE CASOS</a>
         </div>
     </form>
-</div>
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -1506,10 +1505,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+            
+            const controles = document.querySelectorAll('#bloqueAsignaturas input, #bloqueAsignaturas select, #bloqueAsignaturas textarea, #bloqueAsignaturas button, #bloquePresentaCaso input, #bloquePresentaCaso select, #bloquePresentaCaso textarea, #bloquePresentaCaso button');
+            controles.forEach(control => {
+                control.disabled = true;
+            });
         });
 
-        
-    
 </script>
 
 </body>

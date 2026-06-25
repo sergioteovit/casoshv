@@ -10,7 +10,7 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // 1. Generamos el encriptado real y seguro de PHP para 'admin123'
-    $passwordPlana = 'admin123';
+    $passwordPlana = 'Ingcomp1#';
     $hashValido = password_hash($passwordPlana, PASSWORD_BCRYPT);
 
     // 2. Actualizamos al usuario administrador en la base de datos
