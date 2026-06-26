@@ -33,12 +33,60 @@ if (isset($_GET['eliminar'])) {
     }
 }
 
-// Obtener todos los casos clínicos organizados del más reciente al más antiguo
-$stmt = $pdo->query("SELECT id, datos_completos, fecha_registro FROM casos_clinicos ORDER BY fecha_registro DESC");
+// ==========================================
+// LÓGICA DE FILTRADO POR DEPARTAMENTO
+// ==========================================
+$filtro_departamento = isset($_GET['departamento']) ? trim($_GET['departamento']) : '';
+$where_clause = "";
+$params = [];
+
+// Si el usuario escribió algo en el buscador, preparamos el filtro SQL
+if (!empty($filtro_departamento)) {
+    // Usamos LIKE para buscar el término de forma segura dentro del texto JSON
+    $where_clause = " WHERE datos_completos LIKE :depto ";
+    $params[':depto'] = '%' . $filtro_departamento . '%';
+}
+
+// ==========================================
+// LÓGICA DE PAGINACIÓN ACTUALIZADA
+// ==========================================
+$casos_por_pagina = 10;
+$pagina_actual = isset($_GET['p']) && is_numeric($_GET['p']) ? (int)$_GET['p'] : 1;
+if ($pagina_actual < 1) $pagina_actual = 1;
+
+// 1. Contar cuántos casos hay (aplicando el filtro si existe)
+$sqlTotal = "SELECT COUNT(*) FROM casos_clinicos" . $where_clause;
+$stmtTotal = $pdo->prepare($sqlTotal);
+if (!empty($filtro_departamento)) {
+    $stmtTotal->bindValue(':depto', $params[':depto']);
+}
+$stmtTotal->execute();
+$total_casos = $stmtTotal->fetchColumn();
+
+$total_paginas = ceil($total_casos / $casos_por_pagina);
+if ($pagina_actual > $total_paginas && $total_paginas > 0) $pagina_actual = $total_paginas;
+$offset = ($pagina_actual - 1) * $casos_por_pagina;
+
+// 2. Traer los casos filtrados
+$sql = "SELECT id, datos_completos, fecha_registro FROM casos_clinicos" . $where_clause . " ORDER BY id ASC LIMIT :limit OFFSET :offset";
+$stmt = $pdo->prepare($sql);
+
+if (!empty($filtro_departamento)) {
+    $stmt->bindValue(':depto', $params[':depto']);
+}
+$stmt->bindValue(':limit', $casos_por_pagina, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
+
 $casos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Obtener todos los casos clínicos organizados del más reciente al más antiguo
+//$stmt = $pdo->query("SELECT id, datos_completos, fecha_registro FROM casos_clinicos ORDER BY fecha_registro DESC");
+//$casos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 // --- ESTADÍSTICA: Contar el número total de casos en el arreglo ---
-$totalCasos = count($casos);
+//$totalCasos = count($casos);
+$totalCasos = $total_casos;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -109,9 +157,25 @@ $totalCasos = count($casos);
     
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-folder-fill text-primary me-2"></i> Panel de Casos Clínicos</h2>
-        <?php if ($rolUsuario !== 'Invitado'): ?>
-            <a href="nuevo_caso.php" class="btn btn-success"><i class="bi bi-plus-circle me-1"></i> Nuevo Caso</a>
-        <?php endif; ?>
+        <div class="d-flex align-items-center gap-3 mt-3 mt-md-0">
+            <form action="lista_casos.php" method="GET" class="d-flex m-0">
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-funnel text-muted"></i></span>
+                    <input type="text" name="departamento" class="form-control" placeholder="Filtrar por departamento..." value="<?= htmlspecialchars($filtro_departamento) ?>">
+                    <button class="btn btn-primary" type="submit">Filtrar</button>
+
+                    <?php if (!empty($filtro_departamento)): ?>
+                        <a href="lista_casos.php" class="btn btn-outline-danger" title="Limpiar filtro"><i class="bi bi-x-lg"></i></a>
+                    <?php endif; ?>
+                </div>
+            </form>
+
+            <?php if ($_SESSION['rol'] !== 'Invitado'): ?>
+                <a href="nuevo_caso.php" class="btn btn-success shadow-sm text-nowrap">
+                    <i class="bi bi-plus-circle me-1"></i> Nuevo Caso
+                </a>
+            <?php endif; ?>
+        </div>
     </div>
 
     <div class="row mb-4">
@@ -270,6 +334,32 @@ $totalCasos = count($casos);
         </div>
     </div>
 </div>
+    
+<?php if ($total_paginas > 1): ?>
+    <?php 
+        // Generar el fragmento de URL extra si hay un filtro aplicado
+        $url_filtro = !empty($filtro_departamento) ? '&departamento=' . urlencode($filtro_departamento) : ''; 
+    ?>
+    <nav aria-label="Navegación de páginas de casos clínicos" class="mt-4">
+        <ul class="pagination justify-content-center shadow-sm">
+            
+            <li class="page-item <?= ($pagina_actual <= 1) ? 'disabled' : '' ?>">
+                <a class="page-link" href="?p=<?= $pagina_actual - 1 ?><?= $url_filtro ?>"><i class="bi bi-chevron-left"></i> Anterior</a>
+            </li>
+
+            <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                <li class="page-item <?= ($i === $pagina_actual) ? 'active' : '' ?>">
+                    <a class="page-link" href="?p=<?= $i ?><?= $url_filtro ?>"><?= $i ?></a>
+                </li>
+            <?php endfor; ?>
+
+            <li class="page-item <?= ($pagina_actual >= $total_paginas) ? 'disabled' : '' ?>">
+                <a class="page-link" href="?p=<?= $pagina_actual + 1 ?><?= $url_filtro ?>">Siguiente <i class="bi bi-chevron-right"></i></a>
+            </li>
+            
+        </ul>
+    </nav>
+<?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
