@@ -1490,6 +1490,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     continue;
                 }
+                
+                // Procesar Preguntas de simulación
+                if (key === 'simulacion_preguntas' && Array.isArray(valor)) {
+                    valor.forEach((preguntasim, index) => {
+                        let inputsPsim = document.querySelectorAll('input[name="simulacion_preguntas"]');
+                        if (index >= inputsPsim.length) {
+                            const btnAgregar = document.getElementById('btn-add-simulacion-pregunta');
+                            if (btnAgregar) {
+                                btnAgregar.click();
+                                inputsPsim = document.querySelectorAll('input[name="simulacion_preguntas"]');
+                            }
+                        }
+                        if (inputsPsim[index]) inputsPsim[index].value = preguntasim;
+                    });
+                    continue;
+                }
+                
+                // Procesar Preguntas de metacognición
+                if (key === 'metacognicion_preguntas' && Array.isArray(valor)) {
+                    valor.forEach((metap, index) => {
+                        let inputsMetaP = document.querySelectorAll('input[name="metacognicion_preguntas"]');
+                        if (index >= inputsMetaP.length) {
+                            const btnAgregar = document.getElementById('btn-add-metacognicion-pregunta');
+                            if (btnAgregar) {
+                                btnAgregar.click();
+                                inputsMetaP = document.querySelectorAll('input[name="metacognicion_preguntas"]');
+                            }
+                        }
+                        if (inputsMetaP[index]) inputsMetaP[index].value = metap;
+                    });
+                    continue;
+                }
 
                 // Procesar Elementos de formulario estándar restantes (Texto, Selects, Radios)
                 const elementoForm = document.querySelector(`[name="${key}"]`);

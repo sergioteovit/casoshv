@@ -1465,7 +1465,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (valor === undefined || valor === null) continue;
 
                 // Procesar Checkboxes múltiples (departamentos, sistemas_anatomicos, asignaturas)
-                if (Array.isArray(valor) && (key === 'departamentos' || key === 'sistemas_anatomicos' || key === 'asignaturas')) {
+                if (Array.isArray(valor) && (key === 'departamentos' 
+                                             || key === 'sistemas_anatomicos' 
+                                             || key === 'asignaturas')) {
                     valor.forEach(val => {
                         const checkbox = document.querySelector(`input[type="checkbox"][name="${key}"][value="${val}"]`);
                         if (checkbox) {
@@ -1488,6 +1490,38 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
                         if (inputsAutores[index]) inputsAutores[index].value = autor;
+                    });
+                    continue;
+                }
+                
+                // Procesar Preguntas de simulación
+                if (key === 'simulacion_preguntas' && Array.isArray(valor)) {
+                    valor.forEach((preguntasim, index) => {
+                        let inputsPsim = document.querySelectorAll('input[name="simulacion_preguntas"]');
+                        if (index >= inputsPsim.length) {
+                            const btnAgregar = document.getElementById('btn-add-simulacion-pregunta');
+                            if (btnAgregar) {
+                                btnAgregar.click();
+                                inputsPsim = document.querySelectorAll('input[name="simulacion_preguntas"]');
+                            }
+                        }
+                        if (inputsPsim[index]) inputsPsim[index].value = preguntasim;
+                    });
+                    continue;
+                }
+                
+                // Procesar Preguntas de metacognición
+                if (key === 'metacognicion_preguntas' && Array.isArray(valor)) {
+                    valor.forEach((metap, index) => {
+                        let inputsMetaP = document.querySelectorAll('input[name="metacognicion_preguntas"]');
+                        if (index >= inputsMetaP.length) {
+                            const btnAgregar = document.getElementById('btn-add-metacognicion-pregunta');
+                            if (btnAgregar) {
+                                btnAgregar.click();
+                                inputsMetaP = document.querySelectorAll('input[name="metacognicion_preguntas"]');
+                            }
+                        }
+                        if (inputsMetaP[index]) inputsMetaP[index].value = metap;
                     });
                     continue;
                 }

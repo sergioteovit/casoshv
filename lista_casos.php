@@ -131,6 +131,11 @@ $totalCasos = $total_casos;
         <li class="nav-item">
           <a class="nav-link active" href="lista_casos.php">Lista de Casos</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link text-info fw-bold" href="hyfm.php">
+                <i class="bi bi-collection-fill me-1"></i> Historia y FM
+            </a>
+        </li>
         <?php if ($rolUsuario === 'Administrador'): ?>
         <li class="nav-item">
           <a class="nav-link" href="gestion_usuarios.php">Gestión de Usuarios</a>
