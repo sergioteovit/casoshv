@@ -495,6 +495,21 @@ try {
         <button type="button" id="btn-add-diagnostico" class="btn btn-outline-secondary mb-4">
             <i class="bi bi-journal-plus me-1"></i> Agregar otro diagnóstico
         </button>
+            
+        <!-- SELECTOR DE DIAGNÓSTICO CORRECTO -->
+        <div class="card bg-light mt-3 mb-4 shadow-sm border-success">
+            <div class="card-body">
+                <label for="diagnostico_correcto" class="form-label fw-bold text-success">
+                    <i class="bi bi-check-circle-fill me-1"></i> Diagnóstico Correcto
+                </label>
+                <select name="diagnostico_correcto" id="diagnostico_correcto" class="form-select border-success" required>
+                    <option value="">Primero ingresa los diagnósticos diferenciales arriba...</option>
+                </select>
+                <div class="form-text">
+                    Selecciona cuál de las opciones que escribiste arriba es el diagnóstico definitivo.
+                </div>
+            </div>
+        </div>
 
         <!-- PREGUNTAS Y RESPUESTAS (Dinámico) -->
         <h2 class="section-title">PREGUNTAS Y POSIBLES RESPUESTAS</h2>
@@ -990,6 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const containerSimulacion = document.getElementById('simulacion-preguntas-container');
     const containerMetacognicion = document.getElementById('metacognicion-preguntas-container');
     const formulario = document.getElementById('formulario-caso');
+    const selectorCorrecto = document.getElementById('diagnostico_correcto');
 
     // Lógica para el select "Otro" en Padecimiento
     const selectPadecimiento = document.getElementById('padecimiento');
@@ -1135,6 +1151,72 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         containerDiagnosticos.insertAdjacentHTML('beforeend', html);
+    });
+    
+    // Función que lee los inputs y actualiza el select
+    function sincronizarSelector() {
+        // Magia aquí: el selector [name^="diag_dif_"] atrapa diag_dif_1, diag_dif_2, diag_dif_99...
+        const inputsDiagnosticos = document.querySelectorAll('input[name^="diag_dif_"]'); 
+        
+        // Guardamos el valor que el usuario ya había seleccionado para no borrarlo al escribir
+        let valorActual = selectorCorrecto.value;
+        
+        for (const key in datosPrecargados) {
+            if ( key === 'diagnostico_correcto' ){
+                valorActual = datosPrecargados['diagnostico_correcto'];
+            }
+        }
+        
+        // Limpiamos el selector
+        selectorCorrecto.innerHTML = '<option value="">Seleccione el diagnóstico correcto...</option>';
+        
+        let hayOpciones = false;
+
+        // Recorremos cada campo dinámico encontrado
+        inputsDiagnosticos.forEach(input => {
+            const texto = input.value.trim();
+            
+            // Si el campo no está vacío, lo agregamos como opción
+            if (texto !== '') {
+                hayOpciones = true;
+                const opcion = document.createElement('option');
+                opcion.value = texto; // Esto es lo que viajará a PHP al guardar
+                opcion.textContent = texto;
+                
+                // Si este era el que estaba seleccionado, lo mantenemos
+                if (texto === valorActual) {
+                    opcion.selected = true;
+                }
+                
+                selectorCorrecto.appendChild(opcion);
+            }
+        });
+
+        // Mensaje por defecto si borran todo
+        if (!hayOpciones) {
+            selectorCorrecto.innerHTML = '<option value="">Primero ingresa los diagnósticos diferenciales arriba...</option>';
+        }
+        
+        
+    }
+
+    // EVENTO 1: Detectar cuando el usuario ESCRIBE en los campos dinámicos
+    document.body.addEventListener('input', function(e) {
+        // Verifica si el campo donde escribió tiene un name que empiece con "diag_dif_"
+        if (e.target && e.target.name && e.target.name.startsWith('diag_dif_')) {
+            sincronizarSelector();
+        }
+    });
+
+    // EVENTO 2: Detectar cuando el usuario AGREGA o ELIMINA un campo dinámico
+    // Escuchamos los clics en todo el documento
+    document.body.addEventListener('click', function(e) {
+        // Si el elemento clicado es un botón (como "Agregar diagnóstico" o "Eliminar")
+        // le damos un brevísimo tiempo (100ms) para que el campo nuevo aparezca 
+        // o el viejo desaparezca del HTML, y luego actualizamos la lista.
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            setTimeout(sincronizarSelector, 100);
+        }
     });
 
     // Añadir Enlace dinámicamente
