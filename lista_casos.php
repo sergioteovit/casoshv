@@ -193,6 +193,12 @@ $totalCasos = $total_casos;
                     </div>
                     <div class="bg-primary bg-opacity-10 p-3 rounded">
                         <i class="bi bi-database-fill text-primary fs-3 lh-1"></i>
+                        <!-- Botón Descargar Todo (Solo visible para Admin/Editor) -->
+                        <?php if ($_SESSION['rol'] !== 'Invitado' && $_SESSION['rol'] !== 'Editor'): ?>
+                            <a href="descargar_backup.php" class="btn btn-outline-success shadow-sm text-nowrap" title="Descargar copia de seguridad de todos los casos">
+                                <i class="bi bi-file-earmark-zip me-1"></i> Descargar Casos (ZIP)
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
