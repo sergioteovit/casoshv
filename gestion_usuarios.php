@@ -96,6 +96,40 @@ if (isset($_GET['eliminar'])) {
     }
 }
 
+// ==========================================
+// PROCESAR RESTABLECIMIENTO DE CONTRASEÑA
+// ==========================================
+if (isset($_GET['reset_id']) && is_numeric($_GET['reset_id'])) {
+
+    // 🔒 SEGURIDAD: Solo el Administrador puede hacer esto
+    if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'Administrador') {
+        die("Acceso denegado: Solo los Administradores pueden restablecer contraseñas.");
+    }
+
+    $id_reset = intval($_GET['reset_id']);
+
+    // Definir la contraseña temporal por defecto
+    $password_temporal = 'Usuario123!';
+    // Encriptar la contraseña de forma segura usando el algoritmo nativo de PHP
+    $password_hash = password_hash($password_temporal, PASSWORD_DEFAULT);
+
+    try {
+        // Actualizar la contraseña en la base de datos
+        // NOTA: Verifica que tu tabla se llame 'usuarios' y la columna 'password'
+        $stmtReset = $pdo->prepare("UPDATE usuarios SET password = :hash WHERE id = :id");
+        $stmtReset->execute([
+            ':hash' => $password_hash,
+            ':id' => $id_reset
+        ]);
+
+        // Redirigir para limpiar la URL y mostrar mensaje de éxito
+        header("Location: gestion_usuarios.php?msg=pass_reset");
+        exit;
+    } catch (PDOException $e) {
+        $error_sistema = "Error al restablecer la contraseña: " . $e->getMessage();
+    }
+}
+
 // Obtener la lista de usuarios
 $stmt = $pdo->query("SELECT id, usuario, rol, nombre, apellidos, correo, fecha_creacion FROM usuarios ORDER BY fecha_creacion DESC");
 $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -146,6 +180,16 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php if(isset($_GET['msg']) && $_GET['msg'] == 'deleted'): ?>
         <div class="alert alert-success alert-dismissible fade show">Usuario eliminado correctamente.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
+    <!-- ALERTA DE CONTRASEÑA RESTABLECIDA -->
+    <?php if (isset($_GET['msg']) && $_GET['msg'] === 'pass_reset'): ?>
+        <div class="alert alert-warning alert-dismissible fade show shadow-sm border-warning" role="alert">
+            <i class="bi bi-key-fill me-2 fs-5"></i> 
+            <strong>Contraseña restablecida con éxito.</strong> 
+            La nueva contraseña temporal de este usuario es: <code class="fs-5 bg-white px-2 py-1 rounded text-dark border">Usuario123!</code><br>
+            <small>Pide al usuario que inicie sesión y la cambie lo antes posible.</small>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
     
     <div id="contenedor-alerta"></div>
 
@@ -179,6 +223,15 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </select>
                         </td>
                         <td class="text-center">
+                            <!-- BOTÓN RESTABLECER CONTRASEÑA (Solo Admin) -->
+                            <?php if ($_SESSION['rol'] === 'Administrador'): ?>
+                                <a href="?reset_id=<?= $user['id'] ?>" 
+                                   class="btn btn-sm btn-outline-warning shadow-sm" 
+                                   onclick="return confirm('¿Estás seguro de que deseas restablecer la contraseña de <?= htmlspecialchars($user['usuario'] ?? 'este usuario') ?>? La nueva contraseña será \'Usuario123!\'');" 
+                                   title="Restablecer Contraseña">
+                                    <i class="bi bi-key"></i>
+                                </a>
+                            <?php endif; ?>
                             <?php if ($user['id'] !== $_SESSION['usuario_id']): ?>
                                 <a href="eliminar_usuario.php?id=<?= $user['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar usuario?');">
                                     <i class="bi bi-trash"></i>
