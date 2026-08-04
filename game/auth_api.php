@@ -67,14 +67,27 @@ if ($action === 'login') {
         //    "role" => $userRow['RoleName']
         // ]);
         
+        // 2. Obtener Progress y Statistics asegurando que sean CADENAS (string)
+        // Si la BD devuelve NULL o está vacío, asignamos una cadena JSON por defecto "{}"
+        $rawProgress   = !empty($userRow['Progress'])   ? (string)$userRow['Progress']   : '{}';
+        $rawStatistics = !empty($userRow['Statistics']) ? (string)$userRow['Statistics'] : '{}';
+        
+        // Si en PHP por alguna razón $rawProgress fuera un array, lo convertimos a string con json_encode
+        if (is_array($userRow['Progress']) || is_object($userRow['Progress'])) {
+            $rawProgress = json_encode($userRow['Progress']);
+        }
+        if (is_array($userRow['Statistics']) || is_object($userRow['Statistics'])) {
+            $rawStatistics = json_encode($userRow['Statistics']);
+        }
+        
         echo json_encode([
             "success"    => true, 
             "message"    => "Conexión a la base de datos correcta",
             "user_id"    => (string)$userRow['UserId'], // <-- Castear explícitamente a string
             "username"   => (string)$userRow['Username'],
-            "role"       => (string)$userRow['RoleName'],
-            "progress"   => json_decode($userRow['Progress']),
-            "statistics" => json_decode($userRow['Statistics'])
+            "role"       => (string)($userRow['RoleName'] ?? 'Player'),
+            "progress"   => $rawProgress,
+            "statistics" => $rawStatistics
         ]);
         exit();
     } else {
@@ -116,8 +129,8 @@ elseif ($action === 'register') {
 
     // Datos por defecto para el juego
     $defaultPrefs = json_encode(["audio" => ["masterVolume" => 1.0], "ui" => ["language" => "es-MX"]]);
-    $defaultStats = json_encode(["totalPlayTimeSeconds" => 0, "patientsCured" => 0, "totalMoneyEarned" => 0]);
-    $defaultProg = json_encode(["currentLevel" => 1, "inGameCurrency" => 5000.00, "hospitalLayout" => []]);
+    $defaultStats = json_encode(["totalPoints" => 0, "totalStars" => 0, "bronzeStars" => 0]);
+    $defaultProg = json_encode(["playerName" => "Player", "gender" => "Neutro", "playerLevel" => 0, "Points" => 0]);
 
     try {
         $conn->beginTransaction();
@@ -216,6 +229,33 @@ elseif ($action === 'admin_update_user') {
     } catch (PDOException $e) {
         echo json_encode(["success" => false, "error" => "Error al actualizar en la base de datos."]);
     }
+}
+
+// ELIMINAR REGISTRO DE USUARIO
+elseif ($action === 'admin_delete_user') {
+    $userIdToDelete = $_POST['user_id'] ?? null;
+
+    if (!$userIdToDelete) {
+        echo json_encode(["success" => false, "error" => "ID de usuario no proporcionado."]);
+        exit();
+    }
+
+    // Opcional: Evitar que el administrador se elimine a sí mismo
+    if ($userIdToDelete == $_SESSION['UserId']) {
+        echo json_encode(["success" => false, "error" => "No puedes eliminar tu propia cuenta mientras estás conectado."]);
+        exit();
+    }
+
+    // Eliminar primero los datos relacionados en PlayerData si no hay ON DELETE CASCADE en MySQL
+    $stmtData = $conn->prepare("DELETE FROM PlayerData WHERE UserId = :userId");
+    $stmtData->execute([':userId' => $userIdToDelete]);
+
+    // Eliminar el usuario
+    $stmtUser = $conn->prepare("DELETE FROM Users WHERE UserId = :userId");
+    $stmtUser->execute([':userId' => $userIdToDelete]);
+
+    echo json_encode(["success" => true, "message" => "Usuario eliminado correctamente."]);
+    exit();
 }
 
 // === GUARDAR PROGRESO DEL JUEGO DESDE UNITY ===
