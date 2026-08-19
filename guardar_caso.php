@@ -80,7 +80,14 @@ try {
                     if(move_uploaded_file($tmp_name, $targetFilePath)) {
                         // Guardamos solo la ruta relativa para la base de datos
                         $archivosSubidos[] = 'uploads/' . $fileNameLimpio;
-                    }
+                    } 
+                } 
+                else {
+                    // Agrega este bloque para que PHP te devuelva el error exacto
+                    echo json_encode([
+                        'status' => 'error', 
+                        'message' => 'Fallo al subir el archivo. Código de error PHP: ' . $_FILES['archivos']['error'][$key]
+                    ]);
                 }
             }
         }

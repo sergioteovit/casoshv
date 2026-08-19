@@ -1366,7 +1366,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Petición HTTP Fetch enviando los datos organizados al backend remoto PHP
         fetch('guardar_caso.php', {
             method: 'POST',
-            body: payloadFinal
+            body: payloadFinal,
+            credentials: 'include'
         })
         .then(response => response.json())
         .then(data => {
