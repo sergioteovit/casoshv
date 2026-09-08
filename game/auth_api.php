@@ -30,7 +30,8 @@ if ($action === 'login') {
             u.PasswordHash, 
             r.RoleName, 
             p.Progress, 
-            p.Statistics 
+            p.Statistics,
+            p.CasesDataBase
         FROM Users u 
         JOIN Roles r ON u.RoleId = r.RoleId
         JOIN PlayerData p ON u.UserId = p.UserId 
@@ -60,6 +61,7 @@ if ($action === 'login') {
         $_SESSION['Role'] = $userRow['RoleName'];
         $_SESSION['Progress'] = $userRow['Progress'];
         $_SESSION['Statistics'] = $userRow['Statistics'];
+        $_SESSION['CasesDataBase'] = $userRow['CasesDataBase'];
         
         // echo json_encode([
         //    "success" => true, 
@@ -71,6 +73,7 @@ if ($action === 'login') {
         // Si la BD devuelve NULL o está vacío, asignamos una cadena JSON por defecto "{}"
         $rawProgress   = !empty($userRow['Progress'])   ? (string)$userRow['Progress']   : '{}';
         $rawStatistics = !empty($userRow['Statistics']) ? (string)$userRow['Statistics'] : '{}';
+        $rawCasesDataBase = !empty($userRow['CasesDataBase']) ? (string)$userRow['CasesDataBase'] : '{}';
         
         // Si en PHP por alguna razón $rawProgress fuera un array, lo convertimos a string con json_encode
         if (is_array($userRow['Progress']) || is_object($userRow['Progress'])) {
@@ -78,6 +81,9 @@ if ($action === 'login') {
         }
         if (is_array($userRow['Statistics']) || is_object($userRow['Statistics'])) {
             $rawStatistics = json_encode($userRow['Statistics']);
+        }
+        if (is_array($userRow['CasesDataBase']) || is_object($userRow['CasesDataBase'])) {
+            $rawCasesDataBase = json_encode($userRow['CasesDataBase']);
         }
         
         echo json_encode([
@@ -87,7 +93,8 @@ if ($action === 'login') {
             "username"   => (string)$userRow['Username'],
             "role"       => (string)($userRow['RoleName'] ?? 'Player'),
             "progress"   => $rawProgress,
-            "statistics" => $rawStatistics
+            "statistics" => $rawStatistics,
+            "casesDataBase" => $rawCasesDataBase
         ]);
         exit();
     } else {
@@ -131,6 +138,7 @@ elseif ($action === 'register') {
     $defaultPrefs = json_encode(["audio" => ["masterVolume" => 1.0], "ui" => ["language" => "es-MX"]]);
     $defaultStats = json_encode(["totalPoints" => 0, "totalStars" => 0, "bronzeStars" => 0]);
     $defaultProg = json_encode(["playerName" => "Player", "gender" => "Neutro", "playerLevel" => 0, "Points" => 0]);
+    $defaultCDB = json_encode([]);
 
     try {
         $conn->beginTransaction();
@@ -140,7 +148,7 @@ elseif ($action === 'register') {
         $stmtUser->execute([$userId, $username, $email, $hashedPassword]);
 
         // Insertar datos iniciales del juego
-        $stmtData = $conn->prepare("INSERT INTO PlayerData (UserId, Preferences, Statistics, Progress) VALUES (?, ?, ?, ?)");
+        $stmtData = $conn->prepare("INSERT INTO PlayerData (UserId, Preferences, Statistics, Progress, CasesDataBase) VALUES (?, ?, ?, ?, ?)");
         $stmtData->execute([$userId, $defaultPrefs, $defaultStats, $defaultProg]);
 
         $conn->commit();
@@ -263,6 +271,7 @@ elseif ($action === 'save_progress') {
     $userId     = $_POST['user_id'] ?? '';
     $progress   = $_POST['progress'] ?? '{}';
     $statistics = $_POST['statistics'] ?? '{}';
+    $casesDataBase = $_POST['casesDataBase'] ?? '{}';
 
     if (empty($userId)) {
         echo json_encode(["success" => false, "error" => "ID de usuario requerido."]);
@@ -273,13 +282,15 @@ elseif ($action === 'save_progress') {
         $stmt = $conn->prepare("
             UPDATE PlayerData 
             SET Progress = :progress, 
-                Statistics = :statistics 
+                Statistics = :statistics,
+                CasesDataBase = :casesDataBase
             WHERE UserId = :userId
         ");
         
         $stmt->execute([
             ':progress'   => $progress,
             ':statistics' => $statistics,
+            ':casesDataBase' => $casesDataBase,
             ':userId'     => $userId
         ]);
 
