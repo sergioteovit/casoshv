@@ -132,6 +132,61 @@ try {
     }
     
     // ==========================================
+    // PROCESAR DESCARGA DE TODOS LOS JSON EN UN ZIP
+    // ==========================================
+    if (isset($_GET['descargar_todos']) && $_GET['descargar_todos'] === '1') {
+        try {
+            // Obtener todas las tarjetas de la base de datos
+            $stmtTodos = $pdo->query("SELECT datos_tarjeta FROM tarjetas_hyfm");
+            $tarjetas_db = $stmtTodos->fetchAll(PDO::FETCH_ASSOC);
+
+            if (count($tarjetas_db) > 0) {
+                $nombreZip = 'personajes_historicos.zip';
+                $zip = new ZipArchive;
+                
+                // Creamos un archivo temporal en la memoria/disco del servidor
+                $archivo_temporal = tempnam(sys_get_temp_dir(), 'zip');
+
+                if ($zip->open($archivo_temporal, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+                    foreach ($tarjetas_db as $index => $fila) {
+                        $json_crudo = $fila['datos_tarjeta'];
+                        $datos_arreglo = json_decode($json_crudo, true);
+                        
+                        $nombre_personaje = isset($datos_arreglo['nombre_personaje']) ? $datos_arreglo['nombre_personaje'] : 'tarjeta_' . $index;
+                        $nombre_limpio = preg_replace('/[^A-Za-z0-9_\-]/', '_', $nombre_personaje);
+                        
+                        // Añadimos el index al final para evitar que nombres repetidos se sobreescriban
+                        $nombre_archivo = "tarjeta_" . $nombre_limpio . "_" . $index . ".json"; 
+                        
+                        $contenido_json = json_encode($datos_arreglo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                        
+                        // Añadimos el archivo al ZIP directamente desde el texto, sin guardarlo en disco
+                        $zip->addFromString($nombre_archivo, $contenido_json);
+                    }
+                    $zip->close();
+
+                    // Cabeceras para forzar la descarga del ZIP
+                    header('Content-Type: application/zip');
+                    header('Content-Disposition: attachment; filename="' . $nombreZip . '"');
+                    header('Content-Length: ' . filesize($archivo_temporal));
+                    header('Pragma: public');
+                    header('Cache-Control: must-revalidate');
+                    
+                    readfile($archivo_temporal);
+                    unlink($archivo_temporal); // Borramos el archivo temporal para no ocupar espacio
+                    exit; 
+                } else {
+                    $error_descarga = "No se pudo crear el archivo ZIP en el servidor.";
+                }
+            } else {
+                $error_descarga = "La colección está vacía. No hay tarjetas para descargar.";
+            }
+        } catch (PDOException $e) {
+            $error_descarga = "Error de base de datos al generar el ZIP: " . $e->getMessage();
+        }
+    }
+    
+    // ==========================================
     // PROCESAR EDICIÓN DE TARJETA
     // ==========================================
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'editar_tarjeta') {
@@ -264,6 +319,12 @@ try {
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
+    <?php if (isset($error_descarga)): ?>
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> <?= htmlspecialchars($error_descarga) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
     
     <?php if (isset($error_eliminacion)): ?>
         <div class="alert alert-danger shadow-sm"><i class="bi bi-exclamation-triangle-fill me-2"></i> <?= htmlspecialchars($error_eliminacion) ?></div>
@@ -293,6 +354,11 @@ try {
         </div>
         
         <div class="d-flex gap-2 mt-3 mt-md-0">
+            
+            <!-- NUEVO BOTÓN PARA DESCARGAR EL ZIP -->
+            <a href="hyfm.php?descargar_todos=1" class="btn btn-outline-success shadow-sm text-nowrap" title="Descargar todos los JSON en ZIP">
+                <i class="bi bi-file-earmark-zip-fill me-1"></i> Descargar Colección
+            </a>
             
             <?php if ($orden_actual === 'nacimiento'): ?>
                 <a href="hyfm.php" class="btn btn-secondary shadow-sm text-nowrap" title="Volver al orden original">
