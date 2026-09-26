@@ -125,68 +125,61 @@ try {
     <h2>Panel del Jugador</h2>
     <hr>
     
-    <!-- TARJETAS DE ESTADÍSTICAS DEL JUGADOR LOGUEADO -->
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">📈 Jugador</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>Nombre del jugador:</strong> <?php echo $progress['playerName'] ?? ""; ?></li>
-                        <li class="list-group-item"><strong>Género:</strong> <?php echo $progress['gender'] ?? ""; ?></li>
-                        <li class="list-group-item"><strong>Nivel:</strong> <?php echo $progress['playerLevel'] ?? 0; ?></li>
-                    </ul>
+    <!-- NUEVA TABLA: RANKING ACTUAL DEL JUGADOR LOGUEADO RESPECTO A TODOS -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center fw-bold">
+                    <span>🎯 Tu Posición Actual en el Ranking</span>
+                    <span class="badge bg-dark text-warning">Mi Ranking Global</span>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">📊 Estadísticas</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>&#10024; Puntos totales:</strong> <?php echo $statistics['totalPoints'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #bf8970;">★</span> Estrellas de bronze:</strong> <?php echo $statistics['bronzeStars'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #E3E4E5;">★</span> Estrellas de plata:</strong> <?php echo $statistics['silverStars'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #efbf04;">★</span> Estrellas de oro:</strong> <?php echo $statistics['goldStars'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #e5e4e2;">★</span> Estrellas de platino:</strong> <?php echo $statistics['platinumStars'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #a4f4f9;">★</span> Estrellas de diamante:</strong> <?php echo $statistics['diamondStars'] ?? 0; ?></li>
-                    </ul>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0 text-center align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th scope="col" style="width: 100px;">Posición</th>
+                                    <th scope="col">Jugador</th>
+                                    <th scope="col">Nivel</th>
+                                    <th scope="col">Puntos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if ($userRankData): ?>
+                                    <tr class="table-success fw-bold">
+                                        <td>
+                                            <?php 
+                                                $myRank = $userRankData['RankPosition'];
+                                                if ($myRank == 1) echo '<span class="badge bg-warning text-dark fs-6">🥇 1°</span>';
+                                                elseif ($myRank == 2) echo '<span class="badge bg-secondary fs-6">🥈 2°</span>';
+                                                elseif ($myRank == 3) echo '<span class="badge bg-danger fs-6">🥉 3°</span>';
+                                                else echo '<span class="fw-bold">#' . $myRank . '</span>';
+                                            ?>
+                                        </td>
+                                        <td>
+                                            <?php echo htmlspecialchars($userRankData['Username']); ?>
+                                            <span class="badge bg-success ms-1">Tú</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info text-dark">Nivel <?php echo $userRankData['CurrentLevel']; ?></span>
+                                        </td>
+                                        <td>
+                                            <?php echo number_format($userRankData['CuredCount']); ?>
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="4" class="text-muted py-3">No hay información de posición disponible para tu usuario.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">📈 Insignias</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>Insignia 1</strong> </li>
-                        <li class="list-group-item"><strong>Insignia 2</strong> </li>
-                        <li class="list-group-item"><strong>Insignia 3</strong> </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">📊 Items</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">1</li>
-                        <li class="list-group-item">2</li>
-                        <li class="list-group-item">3</li>
-                        <li class="list-group-item">4</li>
-                        <li class="list-group-item">5</li>
-                        <li class="list-group-item">6</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- TABLA DE POSICIONES GLOBAL (TOP 10 JUGADORES) -->
     <div class="row mt-4">
         <div class="col-12">
@@ -245,57 +238,64 @@ try {
             </div>
         </div>
     </div>
-
-    <!-- NUEVA TABLA: RANKING ACTUAL DEL JUGADOR LOGUEADO RESPECTO A TODOS -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card shadow-sm border-warning">
-                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center fw-bold">
-                    <span>🎯 Tu Posición Actual en el Ranking</span>
-                    <span class="badge bg-dark text-warning">Mi Ranking Global</span>
+    
+    <!-- TARJETAS DE ESTADÍSTICAS DEL JUGADOR LOGUEADO -->
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">📈 Jugador</div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Nombre del jugador:</strong> <?php echo $progress['playerName'] ?? ""; ?></li>
+                        <li class="list-group-item"><strong>Género:</strong> <?php echo $progress['gender'] ?? ""; ?></li>
+                        <li class="list-group-item"><strong>Nivel:</strong> <?php echo $progress['playerLevel'] ?? 0; ?></li>
+                    </ul>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0 text-center align-middle">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th scope="col" style="width: 100px;">Posición</th>
-                                    <th scope="col">Jugador</th>
-                                    <th scope="col">Nivel</th>
-                                    <th scope="col">Puntos</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if ($userRankData): ?>
-                                    <tr class="table-success fw-bold">
-                                        <td>
-                                            <?php 
-                                                $myRank = $userRankData['RankPosition'];
-                                                if ($myRank == 1) echo '<span class="badge bg-warning text-dark fs-6">🥇 1°</span>';
-                                                elseif ($myRank == 2) echo '<span class="badge bg-secondary fs-6">🥈 2°</span>';
-                                                elseif ($myRank == 3) echo '<span class="badge bg-danger fs-6">🥉 3°</span>';
-                                                else echo '<span class="fw-bold">#' . $myRank . '</span>';
-                                            ?>
-                                        </td>
-                                        <td>
-                                            <?php echo htmlspecialchars($userRankData['Username']); ?>
-                                            <span class="badge bg-success ms-1">Tú</span>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-info text-dark">Nivel <?php echo $userRankData['CurrentLevel']; ?></span>
-                                        </td>
-                                        <td>
-                                            <?php echo number_format($userRankData['CuredCount']); ?>
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-muted py-3">No hay información de posición disponible para tu usuario.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">📊 Estadísticas</div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>&#10024; Puntos totales:</strong> <?php echo $statistics['totalPoints'] ?? 0; ?></li>
+                        <li class="list-group-item"><strong><span style="color: #bf8970;">★</span> Estrellas de bronze:</strong> <?php echo $statistics['bronzeStars'] ?? 0; ?></li>
+                        <li class="list-group-item"><strong><span style="color: #E3E4E5;">★</span> Estrellas de plata:</strong> <?php echo $statistics['silverStars'] ?? 0; ?></li>
+                        <li class="list-group-item"><strong><span style="color: #efbf04;">★</span> Estrellas de oro:</strong> <?php echo $statistics['goldStars'] ?? 0; ?></li>
+                        <li class="list-group-item"><strong><span style="color: #e5e4e2;">★</span> Estrellas de platino:</strong> <?php echo $statistics['platinumStars'] ?? 0; ?></li>
+                        <li class="list-group-item"><strong><span style="color: #a4f4f9;">★</span> Estrellas de diamante:</strong> <?php echo $statistics['diamondStars'] ?? 0; ?></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">📈 Insignias</div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Insignia 1</strong> </li>
+                        <li class="list-group-item"><strong>Insignia 2</strong> </li>
+                        <li class="list-group-item"><strong>Insignia 3</strong> </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">📊 Items</div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">1</li>
+                        <li class="list-group-item">2</li>
+                        <li class="list-group-item">3</li>
+                        <li class="list-group-item">4</li>
+                        <li class="list-group-item">5</li>
+                        <li class="list-group-item">6</li>
+                    </ul>
                 </div>
             </div>
         </div>
