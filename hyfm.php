@@ -237,12 +237,23 @@ try {
     }
     
     // ==========================================
-    // CONSULTA DE TARJETAS (CON ORDEN CRONOLÓGICO A.C. / D.C.)
+    // CONSULTA DE TARJETAS (CON ORDEN CRONOLÓGICO Y PAGINACIÓN)
     // ==========================================
     $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'defecto';
 
+    // 1. Configuración de la Paginación
+    $limite = 10; // Mostrar 10 elementos por página
+    $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+    if ($pagina < 1) { $pagina = 1; }
+    $offset = ($pagina - 1) * $limite;
+
+    // 2. Obtener el total exacto de registros para calcular las páginas
+    $stmtCount = $pdo->query("SELECT COUNT(*) FROM tarjetas_hyfm");
+    $total_registros = $stmtCount->fetchColumn();
+    $total_paginas = ceil($total_registros / $limite);
+
+    // 3. Preparar la consulta con LIMIT y OFFSET
     if ($orden_actual === 'nacimiento') {
-        // Extraer el año. Si contiene "a.C." o "a. C." se multiplica por -1 para tratarlo como negativo.
         $sql = "SELECT id, datos_tarjeta, fecha_registro, fecha_actualizacion 
                 FROM tarjetas_hyfm 
                 ORDER BY 
@@ -250,22 +261,23 @@ try {
                         WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(datos_tarjeta, '$.ano_nacimiento'))) LIKE '%a.c%' 
                           OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(datos_tarjeta, '$.ano_nacimiento'))) LIKE '%a. c%'
                         THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(datos_tarjeta, '$.ano_nacimiento')) AS SIGNED) * -1
-
                         ELSE CAST(JSON_UNQUOTE(JSON_EXTRACT(datos_tarjeta, '$.ano_nacimiento')) AS SIGNED)
-                    END ASC";
+                    END ASC 
+                LIMIT :limite OFFSET :offset";
     } else {
-        // Orden predeterminado (por orden de registro / ID)
         $sql = "SELECT id, datos_tarjeta, fecha_registro, fecha_actualizacion 
                 FROM tarjetas_hyfm 
-                ORDER BY id ASC";
+                ORDER BY id ASC 
+                LIMIT :limite OFFSET :offset";
     }
 
-    $stmt = $pdo->query($sql);
+    $stmt = $pdo->prepare($sql);
+    // BindParam con PDO::PARAM_INT es vital para que LIMIT y OFFSET no fallen en MySQL
+    $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    
     $tarjetas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Consultar todas las tarjetas ordenadas por su ID
-    // $stmt = $pdo->query("SELECT id, datos_tarjeta, fecha_registro, fecha_actualizacion FROM tarjetas_hyfm ORDER BY id ASC");
-    // $tarjetas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     die("Error de conexión o consulta: " . $e->getMessage());
@@ -294,6 +306,7 @@ try {
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link" href="lista_casos.php">Lista de Casos</a></li>
         <li class="nav-item"><a class="nav-link active text-info fw-bold" href="hyfm.php"><i class="bi bi-collection-fill me-1"></i> HyFM</a></li>
+        <li class="nav-item"><a class="nav-link active text-info fw-bold" href="casos_historicos.php"><i class="bi bi-collection-fill me-1"></i> Casos Históricos</a></li>
       </ul>
       <div class="d-flex align-items-center text-white">
           <span class="me-3 small"><i class="bi bi-person-circle text-primary me-1"></i> <?= htmlspecialchars($_SESSION['nombre_completo'] ?? 'Usuario') ?></span>
@@ -347,7 +360,7 @@ try {
                 <i class="bi bi-collection text-info me-2"></i>
                 Colección de Tarjetas HyFM
                 <span class="badge bg-info text-white ms-3 rounded-pill fs-6 shadow-sm">
-                    <?= count($tarjetas) ?> tarjetas
+                    <?= $total_registros ?> tarjetas en total
                 </span>
             </h2>
             <p class="text-muted mb-0">Directorio de personajes históricos extraídos de estructura JSON.</p>
@@ -492,6 +505,37 @@ try {
             </div>
         </div>
     </div>
+    <!-- CONTROLES DE PAGINACIÓN -->
+    <?php if ($total_paginas > 1): ?>
+    <nav aria-label="Navegación de páginas" class="mt-4 mb-4">
+        <ul class="pagination justify-content-center shadow-sm">
+            
+            <!-- Botón Anterior -->
+            <li class="page-item <?= ($pagina <= 1) ? 'disabled' : '' ?>">
+                <a class="page-link" href="?pagina=<?= $pagina - 1 ?><?= ($orden_actual !== 'defecto') ? '&orden='.$orden_actual : '' ?>">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
+            </li>
+            
+            <!-- Números de página -->
+            <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                <li class="page-item <?= ($pagina == $i) ? 'active' : '' ?>">
+                    <a class="page-link" href="?pagina=<?= $i ?><?= ($orden_actual !== 'defecto') ? '&orden='.$orden_actual : '' ?>">
+                        <?= $i ?>
+                    </a>
+                </li>
+            <?php endfor; ?>
+            
+            <!-- Botón Siguiente -->
+            <li class="page-item <?= ($pagina >= $total_paginas) ? 'disabled' : '' ?>">
+                <a class="page-link" href="?pagina=<?= $pagina + 1 ?><?= ($orden_actual !== 'defecto') ? '&orden='.$orden_actual : '' ?>">
+                    Siguiente <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            
+        </ul>
+    </nav>
+    <?php endif; ?>
 </div>
 
 <?php if ($_SESSION['rol'] !== 'Invitado'): ?>
