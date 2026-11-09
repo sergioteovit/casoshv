@@ -9,6 +9,42 @@ if (!isset($_SESSION['usuario_id'])) {
 
 $rolUsuario = $_SESSION['rol'];
 
+// Lista fija e inmutable de periodos históricos
+$periodos_disponibles = [
+    "Prehistoria y Antigüedad Oriental. Prehistoria - siglo VI a. C.",
+    "Medicina Náhuatl Prehispánica. Preclásico 2500 a.C. - Periodo Posclásico 1521 d.C.",
+    "Medicina Antigua Clásica. Siglo VI a. C. al siglo II d. C.",
+    "Edad Media y Mundo Cristiano/Islámico. Siglos V d. C. al XIV d. C.",
+    "Humanismo y Renacimiento. Siglos XV y XVI",
+    "Medicina Novohispana Siglo XVI. Siglo XVI",
+    "Barroco. Siglo XVII",
+    "Novohispano. Siglo XVII",
+    "Ilustración. Siglo XVIII",
+    "Medicina Novohispana. Siglo XVIII",
+    "Era Científica y Positivista. Siglo XIX",
+    "La Medicina Mexicana decimonónica. Siglo XIX",
+    "Era Contemporánea y Prospectiva. Siglos XX, XXI y Futuro",
+    "La medicina en México. Siglos XX y XXI"
+];
+
+// Estilos de color (fondo y texto) personalizados por periodo histórico
+$estilos_periodos = [
+    "Prehistoria y Antigüedad Oriental. Prehistoria - siglo VI a. C."=> "background-color: #8D6E63; color: #ffffff;",
+    "Medicina Náhuatl Prehispánica. Preclásico 2500 a.C. - Periodo Posclásico 1521 d.C."=> "background-color: #E65100; color: #ffffff;",
+    "Medicina Antigua Clásica. Siglo VI a. C. al siglo II d. C."=> "background-color: #D4AC0D; color: #1C2833;",
+    "Edad Media y Mundo Cristiano/Islámico. Siglos V d. C. al XIV d. C."=> "background-color: #5D4037; color: #ffffff;",
+    "Humanismo y Renacimiento. Siglos XV y XVI"=> "background-color: #27AE60; color: #ffffff;",
+    "Medicina Novohispana Siglo XVI. Siglo XVI"=> "background-color: #A569BD; color: #ffffff;",
+    "Barroco. Siglo XVII"=> "background-color: #C0392B; color: #ffffff;",
+    "Novohispano. Siglo XVII" => "background-color: #8E44AD; color: #ffffff;",
+    "Ilustración. Siglo XVIII" => "background-color: #F1C40F; color: #1C2833;",
+    "Medicina Novohispana. Siglo XVIII"=> "background-color: #16A085; color: #ffffff;",
+    "Era Científica y Positivista. Siglo XIX"=> "background-color: #2980B9; color: #ffffff;",
+    "La Medicina Mexicana decimonónica. Siglo XIX"=> "background-color: #D35400; color: #ffffff;",
+    "Era Contemporánea y Prospectiva. Siglos XX, XXI y Futuro" => "background-color: #2C3E50; color: #ffffff;",
+    "La medicina en México. Siglos XX y XXI" => "background-color: #00838F; color: #ffffff;"
+];
+
 // Configuración de la BD
 $host = 'localhost';
 $dbname = 'myhvirtual';
@@ -24,29 +60,31 @@ try {
     // ==========================================
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'crear_tarjeta') {
         
-        // VALIDACIÓN: Bloquear si es Invitado
         if ($_SESSION['rol'] === 'Invitado') {
             die("Acceso denegado: Los invitados no tienen permiso para crear o modificar tarjetas.");
         }
         
         $nombre = trim($_POST['nombre_personaje']);
+        $periodo = trim($_POST['periodo'] ?? '');
         $ano_nac = trim($_POST['ano_nacimiento']);
         $ano_muerte = trim($_POST['ano_muerte']);
         $importancia = trim($_POST['importancia_historica']);
 
-        // Unificar las fechas para mantener compatibilidad con la tabla
+        if (!in_array($periodo, $periodos_disponibles)) {
+            $periodo = $periodos_disponibles[0];
+        }
+
         $fechas_vida = $ano_nac;
         if (!empty($ano_muerte)) {
             $fechas_vida .= ' - ' . $ano_muerte;
         }
 
-        // Crear el número de tarjeta aleatorio (ej: #042) o puedes dejarlo fijo
         $numero_tarjeta = str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
 
-        // Construir el arreglo que se convertirá en JSON
         $nueva_tarjeta = [
             'numero' => $numero_tarjeta,
             'nombre_personaje' => $nombre,
+            'periodo' => $periodo,
             'fecha_nacimiento' => $fechas_vida,
             'ano_nacimiento' => $ano_nac,
             'ano_muerte' => $ano_muerte,
@@ -59,7 +97,6 @@ try {
             $stmtInsert = $pdo->prepare("INSERT INTO tarjetas_hyfm (datos_tarjeta) VALUES (:datos)");
             $stmtInsert->execute([':datos' => $json_datos]);
             
-            // Recargar la página con mensaje de éxito para evitar que se duplique al recargar (F5)
             header("Location: hyfm.php?msg=creado");
             exit;
         } catch (PDOException $e) {
@@ -72,7 +109,6 @@ try {
     // ==========================================
     if (isset($_GET['eliminar_id']) && is_numeric($_GET['eliminar_id'])) {
         
-        // 🔒 SEGURIDAD: Solo Administradores y Editores pueden eliminar
         if ($_SESSION['rol'] === 'Invitado') {
             die("Acceso denegado: Los invitados no tienen permiso para eliminar tarjetas.");
         }
@@ -83,7 +119,6 @@ try {
             $stmtDel = $pdo->prepare("DELETE FROM tarjetas_hyfm WHERE id = :id");
             $stmtDel->execute([':id' => $id_eliminar]);
             
-            // Redirigir para limpiar la URL y mostrar mensaje de éxito
             header("Location: hyfm.php?msg=eliminado");
             exit;
         } catch (PDOException $e) {
@@ -98,31 +133,29 @@ try {
         $id_descargar = intval($_GET['descargar_id']);
         
         try {
-            // Consultar únicamente el campo JSON de la tarjeta solicitada
             $stmtDesc = $pdo->prepare("SELECT datos_tarjeta FROM tarjetas_hyfm WHERE id = :id");
             $stmtDesc->execute([':id' => $id_descargar]);
             $json_crudo = $stmtDesc->fetchColumn();
 
             if ($json_crudo) {
-                // Decodificar para limpiar y estructurar correctamente el archivo
                 $datos_arreglo = json_decode($json_crudo, true);
                 
-                // Crear un nombre de archivo amigable basado en el personaje
+                if (!isset($datos_arreglo['periodo']) || empty($datos_arreglo['periodo'])) {
+                    $datos_arreglo['periodo'] = $periodos_disponibles[0];
+                }
+
                 $nombre_personaje = isset($datos_arreglo['nombre_personaje']) ? $datos_arreglo['nombre_personaje'] : 'tarjeta';
-                // Limpiar caracteres especiales del nombre para evitar errores en el sistema operativo
                 $nombre_limpio = preg_replace('/[^A-Za-z0-9_\-]/', '_', $nombre_personaje);
                 $nombre_archivo = "tarjeta_" . $nombre_limpio . ".json";
 
-                // Enviar las cabeceras HTTP necesarias para forzar la descarga del archivo
                 header('Content-Type: application/json; charset=utf-8');
                 header('Content-Disposition: attachment; filename="' . $nombre_archivo . '"');
                 header('Expires: 0');
                 header('Cache-Control: must-revalidate');
                 header('Pragma: public');
                 
-                // Imprimir el JSON con formato indentado (lindo) y caracteres legibles
                 echo json_encode($datos_arreglo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                exit; // Detener la ejecución para que no se descargue el resto del HTML de la página
+                exit;
             } else {
                 die("Error: La tarjeta solicitada no existe.");
             }
@@ -136,7 +169,6 @@ try {
     // ==========================================
     if (isset($_GET['descargar_todos']) && $_GET['descargar_todos'] === '1') {
         try {
-            // Obtener todas las tarjetas de la base de datos
             $stmtTodos = $pdo->query("SELECT datos_tarjeta FROM tarjetas_hyfm");
             $tarjetas_db = $stmtTodos->fetchAll(PDO::FETCH_ASSOC);
 
@@ -144,7 +176,6 @@ try {
                 $nombreZip = 'personajes_historicos.zip';
                 $zip = new ZipArchive;
                 
-                // Creamos un archivo temporal en la memoria/disco del servidor
                 $archivo_temporal = tempnam(sys_get_temp_dir(), 'zip');
 
                 if ($zip->open($archivo_temporal, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
@@ -152,20 +183,19 @@ try {
                         $json_crudo = $fila['datos_tarjeta'];
                         $datos_arreglo = json_decode($json_crudo, true);
                         
+                        if (!isset($datos_arreglo['periodo']) || empty($datos_arreglo['periodo'])) {
+                            $datos_arreglo['periodo'] = $periodos_disponibles[0];
+                        }
+
                         $nombre_personaje = isset($datos_arreglo['nombre_personaje']) ? $datos_arreglo['nombre_personaje'] : 'tarjeta_' . $index;
                         $nombre_limpio = preg_replace('/[^A-Za-z0-9_\-]/', '_', $nombre_personaje);
-                        
-                        // Añadimos el index al final para evitar que nombres repetidos se sobreescriban
                         $nombre_archivo = "tarjeta_" . $nombre_limpio . "_" . $index . ".json"; 
                         
                         $contenido_json = json_encode($datos_arreglo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                        
-                        // Añadimos el archivo al ZIP directamente desde el texto, sin guardarlo en disco
                         $zip->addFromString($nombre_archivo, $contenido_json);
                     }
                     $zip->close();
 
-                    // Cabeceras para forzar la descarga del ZIP
                     header('Content-Type: application/zip');
                     header('Content-Disposition: attachment; filename="' . $nombreZip . '"');
                     header('Content-Length: ' . filesize($archivo_temporal));
@@ -173,7 +203,7 @@ try {
                     header('Cache-Control: must-revalidate');
                     
                     readfile($archivo_temporal);
-                    unlink($archivo_temporal); // Borramos el archivo temporal para no ocupar espacio
+                    unlink($archivo_temporal);
                     exit; 
                 } else {
                     $error_descarga = "No se pudo crear el archivo ZIP en el servidor.";
@@ -191,28 +221,31 @@ try {
     // ==========================================
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'editar_tarjeta') {
         
-        // 🔒 SEGURIDAD: Bloquear si es Invitado
         if ($_SESSION['rol'] === 'Invitado') {
             die("Acceso denegado: Los invitados no tienen permiso para editar tarjetas.");
         }
         
         $id_editar = intval($_POST['id_tarjeta']);
         $nombre = trim($_POST['nombre_personaje']);
+        $periodo = trim($_POST['periodo'] ?? '');
         $ano_nac = trim($_POST['ano_nacimiento']);
         $ano_muerte = trim($_POST['ano_muerte']);
         $importancia = trim($_POST['importancia_historica']);
-        $numero_existente = trim($_POST['numero_tarjeta']); // Mantenemos su número original
+        $numero_existente = trim($_POST['numero_tarjeta']);
 
-        // Unificar las fechas
+        if (!in_array($periodo, $periodos_disponibles)) {
+            $periodo = $periodos_disponibles[0];
+        }
+
         $fechas_vida = $ano_nac;
         if (!empty($ano_muerte)) {
             $fechas_vida .= ' - ' . $ano_muerte;
         }
 
-        // Reconstruir el arreglo estructurado JSON
         $tarjeta_actualizada = [
             'numero' => $numero_existente,
             'nombre_personaje' => $nombre,
+            'periodo' => $periodo,
             'fecha_nacimiento' => $fechas_vida,
             'ano_nacimiento' => $ano_nac,
             'ano_muerte' => $ano_muerte,
@@ -222,7 +255,6 @@ try {
         $json_datos = json_encode($tarjeta_actualizada, JSON_UNESCAPED_UNICODE);
 
         try {
-            // Actualizamos el JSON. La columna fecha_actualizacion cambiará sola gracias a MySQL
             $stmtUpdate = $pdo->prepare("UPDATE tarjetas_hyfm SET datos_tarjeta = :datos WHERE id = :id");
             $stmtUpdate->execute([
                 ':datos' => $json_datos,
@@ -237,22 +269,19 @@ try {
     }
     
     // ==========================================
-    // CONSULTA DE TARJETAS (CON ORDEN CRONOLÓGICO Y PAGINACIÓN)
+    // CONSULTA DE TARJETAS (CON PAGINACIÓN Y ORDENAMIENTO)
     // ==========================================
     $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'defecto';
 
-    // 1. Configuración de la Paginación
-    $limite = 10; // Mostrar 10 elementos por página
+    $limite = 10;
     $pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
     if ($pagina < 1) { $pagina = 1; }
     $offset = ($pagina - 1) * $limite;
 
-    // 2. Obtener el total exacto de registros para calcular las páginas
     $stmtCount = $pdo->query("SELECT COUNT(*) FROM tarjetas_hyfm");
     $total_registros = $stmtCount->fetchColumn();
     $total_paginas = ceil($total_registros / $limite);
 
-    // 3. Preparar la consulta con LIMIT y OFFSET
     if ($orden_actual === 'nacimiento') {
         $sql = "SELECT id, datos_tarjeta, fecha_registro, fecha_actualizacion 
                 FROM tarjetas_hyfm 
@@ -264,6 +293,20 @@ try {
                         ELSE CAST(JSON_UNQUOTE(JSON_EXTRACT(datos_tarjeta, '$.ano_nacimiento')) AS SIGNED)
                     END ASC 
                 LIMIT :limite OFFSET :offset";
+    } elseif ($orden_actual === 'periodo') {
+        // Generar lista entrecomillada para función FIELD de MySQL
+        $lista_periodos_sql = implode(',', array_map(function($p) use ($pdo) {
+            return $pdo->quote($p);
+        }, $periodos_disponibles));
+
+        $sql = "SELECT id, datos_tarjeta, fecha_registro, fecha_actualizacion 
+                FROM tarjetas_hyfm 
+                ORDER BY 
+                    CASE 
+                        WHEN FIELD(JSON_UNQUOTE(JSON_EXTRACT(datos_tarjeta, '$.periodo')), $lista_periodos_sql) = 0 THEN 999
+                        ELSE FIELD(JSON_UNQUOTE(JSON_EXTRACT(datos_tarjeta, '$.periodo')), $lista_periodos_sql)
+                    END ASC, id ASC 
+                LIMIT :limite OFFSET :offset";
     } else {
         $sql = "SELECT id, datos_tarjeta, fecha_registro, fecha_actualizacion 
                 FROM tarjetas_hyfm 
@@ -272,7 +315,6 @@ try {
     }
 
     $stmt = $pdo->prepare($sql);
-    // BindParam con PDO::PARAM_INT es vital para que LIMIT y OFFSET no fallen en MySQL
     $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
@@ -366,20 +408,22 @@ try {
             <p class="text-muted mb-0">Directorio de personajes históricos extraídos de estructura JSON.</p>
         </div>
         
-        <div class="d-flex gap-2 mt-3 mt-md-0">
-            
-            <!-- NUEVO BOTÓN PARA DESCARGAR EL ZIP -->
+        <div class="d-flex gap-2 mt-3 mt-md-0 flex-wrap">
             <a href="hyfm.php?descargar_todos=1" class="btn btn-outline-success shadow-sm text-nowrap" title="Descargar todos los JSON en ZIP">
                 <i class="bi bi-file-earmark-zip-fill me-1"></i> Descargar Colección
             </a>
             
-            <?php if ($orden_actual === 'nacimiento'): ?>
+            <a href="hyfm.php?orden=nacimiento" class="btn <?= ($orden_actual === 'nacimiento') ? 'btn-primary' : 'btn-outline-primary' ?> shadow-sm text-nowrap">
+                <i class="bi bi-sort-numeric-down me-1"></i> Nacimiento
+            </a>
+
+            <a href="hyfm.php?orden=periodo" class="btn <?= ($orden_actual === 'periodo') ? 'btn-primary' : 'btn-outline-primary' ?> shadow-sm text-nowrap">
+                <i class="bi bi-hourglass-split me-1"></i> Periodo
+            </a>
+
+            <?php if ($orden_actual !== 'defecto'): ?>
                 <a href="hyfm.php" class="btn btn-secondary shadow-sm text-nowrap" title="Volver al orden original">
-                    <i class="bi bi-x-circle me-1"></i> Quitar Orden
-                </a>
-            <?php else: ?>
-                <a href="hyfm.php?orden=nacimiento" class="btn btn-outline-primary shadow-sm text-nowrap">
-                    <i class="bi bi-sort-numeric-down me-1"></i> Ordenar por Nacimiento
+                    <i class="bi bi-x-circle me-1"></i> Restablecer Orden
                 </a>
             <?php endif; ?>
 
@@ -388,7 +432,6 @@ try {
                     <i class="bi bi-plus-circle me-1"></i> Nueva Tarjeta
                 </button>
             <?php endif; ?>
-            
         </div>
     </div>
 
@@ -399,26 +442,29 @@ try {
                     <thead class="table-dark">
                         <tr>
                             <th class="text-center" style="width: 80px;">Número</th>
-                            <th style="width: 250px;">Personaje Histórico</th>
-                            <th style="width: 200px;">Fecha de nacimiento y muerte (si aplica)</th>
+                            <th style="width: 220px;">Personaje Histórico</th>
+                            <th style="width: 200px;">Periodo</th>
+                            <th style="width: 180px;">Fechas de vida</th>
                             <th>Importancia Histórica</th>
-                            <th style="width: 220px;">Última Actualización</th>
+                            <th style="width: 180px;">Última Actualización</th>
                             <th class="text-center" style="width: 100px;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($tarjetas as $tarjeta): 
-                            // Decodificar el JSON de la tarjeta
                             $datos = json_decode($tarjeta['datos_tarjeta'], true);
                             if (!is_array($datos)) $datos = [];
 
-                            // Extraer las variables con valores por defecto
                             $numero = isset($datos['numero']) ? $datos['numero'] : '-';
                             $nombre = isset($datos['nombre_personaje']) ? $datos['nombre_personaje'] : 'Desconocido';
+                            
+                            $periodo = (isset($datos['periodo']) && !empty($datos['periodo'])) ? $datos['periodo'] : $periodos_disponibles[0];
+                            
+                            $estilo_badge = isset($estilos_periodos[$periodo]) ? $estilos_periodos[$periodo] : "background-color: #6c757d; color: #ffffff;";
+
                             $fecha_nac = isset($datos['fecha_nacimiento']) ? $datos['fecha_nacimiento'] : 'No especificada';
                             $importancia = isset($datos['importancia_historica']) ? $datos['importancia_historica'] : 'Sin descripción';
                             
-                            // Formatear las fechas de la BD
                             $creado = $tarjeta['fecha_registro'];
                             $actualizado = $tarjeta['fecha_actualizacion'];
                         ?>
@@ -430,13 +476,16 @@ try {
                                     <?= htmlspecialchars($nombre) ?>
                                 </td>
                                 <td>
+                                    <span class="badge text-wrap text-start shadow-sm" style="<?= $estilo_badge ?> padding: 0.5em 0.75em; font-size: 0.82rem; border-radius: 6px;">
+                                        <?= htmlspecialchars($periodo) ?>
+                                    </span>
+                                </td>
+                                <td>
                                     <i class="bi bi-calendar3 text-muted me-1"></i> <?= htmlspecialchars($fecha_nac) ?>
                                 </td>
-                                
                                 <td>
                                     <?= nl2br(htmlspecialchars($importancia)) ?>
                                 </td>
-                                
                                 <td>
                                     <?php if ($creado === $actualizado): ?>
                                         <small class="text-muted d-block">
@@ -453,11 +502,9 @@ try {
                                         </strong>
                                     <?php endif; ?>
                                 </td>
-                                
                                 <td class="text-center align-middle">
                                     <div class="btn-group" role="group" aria-label="Acciones de tarjeta">
                                         <?php if ($_SESSION['rol'] !== 'Invitado'): 
-                                            // Obtenemos año de nacimiento y muerte individuales del JSON para el formulario
                                             $a_nac = isset($datos['ano_nacimiento']) ? $datos['ano_nacimiento'] : '';
                                             $a_mue = isset($datos['ano_muerte']) ? $datos['ano_muerte'] : '';
                                         ?>
@@ -471,6 +518,7 @@ try {
                                                     data-id="<?= $tarjeta['id'] ?>"
                                                     data-numero="<?= htmlspecialchars($numero) ?>"
                                                     data-nombre="<?= htmlspecialchars($nombre) ?>"
+                                                    data-periodo="<?= htmlspecialchars($periodo) ?>"
                                                     data-nacimiento="<?= htmlspecialchars($a_nac) ?>"
                                                     data-muerte="<?= htmlspecialchars($a_mue) ?>"
                                                     data-importancia="<?= htmlspecialchars($importancia) ?>"
@@ -479,7 +527,7 @@ try {
                                             </button>
                                             <a href="?eliminar_id=<?= $tarjeta['id'] ?>" 
                                                class="btn btn-sm btn-outline-danger shadow-sm" 
-                                               onclick="return confirm('¿Estás seguro de que deseas eliminar la tarjeta de <?= addslashes($nombre) ?> permanentemente? Esta acción no se puede deshacer.');" 
+                                               onclick="return confirm('¿Estás seguro de que deseas eliminar la tarjeta de <?= addslashes($nombre) ?> permanentemente?');" 
                                                title="Eliminar tarjeta">
                                                 <i class="bi bi-trash"></i>
                                             </a>
@@ -488,13 +536,12 @@ try {
                                         <?php endif; ?>
                                     </div>
                                 </td>
-                                
                             </tr>
                         <?php endforeach; ?>
                         
                         <?php if (empty($tarjetas)): ?>
                             <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">
+                                <td colspan="7" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     Aún no hay tarjetas registradas en la colección.
                                 </td>
@@ -505,19 +552,16 @@ try {
             </div>
         </div>
     </div>
+
     <!-- CONTROLES DE PAGINACIÓN -->
     <?php if ($total_paginas > 1): ?>
     <nav aria-label="Navegación de páginas" class="mt-4 mb-4">
         <ul class="pagination justify-content-center shadow-sm">
-            
-            <!-- Botón Anterior -->
             <li class="page-item <?= ($pagina <= 1) ? 'disabled' : '' ?>">
                 <a class="page-link" href="?pagina=<?= $pagina - 1 ?><?= ($orden_actual !== 'defecto') ? '&orden='.$orden_actual : '' ?>">
                     <i class="bi bi-chevron-left"></i> Anterior
                 </a>
             </li>
-            
-            <!-- Números de página -->
             <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
                 <li class="page-item <?= ($pagina == $i) ? 'active' : '' ?>">
                     <a class="page-link" href="?pagina=<?= $i ?><?= ($orden_actual !== 'defecto') ? '&orden='.$orden_actual : '' ?>">
@@ -525,24 +569,22 @@ try {
                     </a>
                 </li>
             <?php endfor; ?>
-            
-            <!-- Botón Siguiente -->
             <li class="page-item <?= ($pagina >= $total_paginas) ? 'disabled' : '' ?>">
                 <a class="page-link" href="?pagina=<?= $pagina + 1 ?><?= ($orden_actual !== 'defecto') ? '&orden='.$orden_actual : '' ?>">
                     Siguiente <i class="bi bi-chevron-right"></i>
                 </a>
             </li>
-            
         </ul>
     </nav>
     <?php endif; ?>
 </div>
 
 <?php if ($_SESSION['rol'] !== 'Invitado'): ?>
+
+<!-- MODAL CREAR TARJETA -->
 <div class="modal fade" id="modalNuevaTarjeta" tabindex="-1" aria-labelledby="modalNuevaTarjetaLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow">
-      
       <form action="hyfm.php" method="POST">
         <div class="modal-header bg-info text-white">
           <h5 class="modal-title fw-bold" id="modalNuevaTarjetaLabel">
@@ -555,9 +597,17 @@ try {
           <input type="hidden" name="accion" value="crear_tarjeta">
           
           <div class="row mb-3">
-              <div class="col-12">
+              <div class="col-md-6 mb-3 mb-md-0">
                   <label class="form-label fw-bold text-secondary">Nombre del Personaje Histórico</label>
                   <input type="text" name="nombre_personaje" class="form-control" required placeholder="Ej. Marie Curie, Isaac Newton...">
+              </div>
+              <div class="col-md-6">
+                  <label class="form-label fw-bold text-secondary">Periodo Histórico</label>
+                  <select name="periodo" class="form-select" required>
+                      <?php foreach ($periodos_disponibles as $p): ?>
+                          <option value="<?= htmlspecialchars($p) ?>"><?= htmlspecialchars($p) ?></option>
+                      <?php endforeach; ?>
+                  </select>
               </div>
           </div>
           
@@ -578,7 +628,6 @@ try {
                   <textarea name="importancia_historica" class="form-control" rows="4" required placeholder="Describe los logros más importantes o el impacto histórico del personaje..."></textarea>
               </div>
           </div>
-          
         </div>
         
         <div class="modal-footer">
@@ -588,15 +637,14 @@ try {
           </button>
         </div>
       </form>
-      
     </div>
   </div>
 </div>
 
+<!-- MODAL EDITAR TARJETA -->
 <div class="modal fade" id="modalEditarTarjeta" tabindex="-1" aria-labelledby="modalEditarTarjetaLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow">
-      
       <form action="hyfm.php" method="POST">
         <div class="modal-header bg-warning text-dark">
           <h5 class="modal-title fw-bold" id="modalEditarTarjetaLabel">
@@ -607,14 +655,21 @@ try {
         
         <div class="modal-body p-4 bg-light">
           <input type="hidden" name="accion" value="editar_tarjeta">
-          
           <input type="hidden" name="id_tarjeta" id="edit_id_tarjeta">
           <input type="hidden" name="numero_tarjeta" id="edit_numero_tarjeta">
           
           <div class="row mb-3">
-              <div class="col-12">
+              <div class="col-md-6 mb-3 mb-md-0">
                   <label class="form-label fw-bold text-secondary">Nombre del Personaje Histórico</label>
                   <input type="text" name="nombre_personaje" id="edit_nombre" class="form-control" required>
+              </div>
+              <div class="col-md-6">
+                  <label class="form-label fw-bold text-secondary">Periodo Histórico</label>
+                  <select name="periodo" id="edit_periodo" class="form-select" required>
+                      <?php foreach ($periodos_disponibles as $p): ?>
+                          <option value="<?= htmlspecialchars($p) ?>"><?= htmlspecialchars($p) ?></option>
+                      <?php endforeach; ?>
+                  </select>
               </div>
           </div>
           
@@ -635,7 +690,6 @@ try {
                   <textarea name="importancia_historica" id="edit_importancia" class="form-control" rows="4" required></textarea>
               </div>
           </div>
-          
         </div>
         
         <div class="modal-footer">
@@ -645,7 +699,6 @@ try {
           </button>
         </div>
       </form>
-      
     </div>
   </div>
 </div>
@@ -656,34 +709,30 @@ try {
     
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // 1. Capturar todos los botones que tengan la clase 'btn-editar-tarjeta'
     const botonesEditar = document.querySelectorAll('.btn-editar-tarjeta');
-    
-    // 2. Inicializar de forma manual el modal de Bootstrap para poder controlarlo
     const modalElemento = document.getElementById('modalEditarTarjeta');
-    // Validamos que exista en el HTML (no existirá si el rol es Invitado)
+
     if (modalElemento) {
         const modalEditar = new bootstrap.Modal(modalElemento);
 
         botonesEditar.forEach(boton => {
             boton.addEventListener('click', function () {
-                // 3. Extraer los datos desde los atributos 'data-*' del botón presionado
                 const id = this.getAttribute('data-id');
                 const numero = this.getAttribute('data-numero');
                 const nombre = this.getAttribute('data-nombre');
+                const periodo = this.getAttribute('data-periodo');
                 const nacimiento = this.getAttribute('data-nacimiento');
                 const muerte = this.getAttribute('data-muerte');
                 const importancia = this.getAttribute('data-importancia');
 
-                // 4. Inyectar los valores extraídos directamente en los inputs del Formulario
                 document.getElementById('edit_id_tarjeta').value = id;
                 document.getElementById('edit_numero_tarjeta').value = numero;
                 document.getElementById('edit_nombre').value = nombre;
+                document.getElementById('edit_periodo').value = periodo || 'Prehistoria y Antigüedad Oriental';
                 document.getElementById('edit_nacimiento').value = nacimiento;
                 document.getElementById('edit_muerte').value = muerte;
                 document.getElementById('edit_importancia').value = importancia;
 
-                // 5. Mostrar el panel flotante en pantalla
                 modalEditar.show();
             });
         });
