@@ -2,10 +2,9 @@
 // ==========================================
 // CONFIGURACIÓN DE LA BASE DE DATOS
 // ==========================================
-$host     = 'localhost';         // Servidor (normalmente localhost)
-$dbname   = 'myhvirtual';  // CAMBIAR por el nombre real de tu base de datos
-$usuario  = 'myhvirtual';              // CAMBIAR por tu usuario de MySQL
-$password = 'uPLtaPntlDJnThpf';                  // CAMBIAR por tu contraseña de MySQL
+require_once __DIR__ . '/config_bd.php';
+$usuario  = $user;
+$password = $pass;
 
 try {
     // Especificar el charset utf8mb4 es vital para no corromper los acentos en el JSON

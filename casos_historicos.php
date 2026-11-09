@@ -10,10 +10,8 @@ if (!isset($_SESSION['usuario_id'])) {
 $rolUsuario = $_SESSION['rol'] ?? 'Invitado';
 
 // Configuración de la BD
-$host = 'localhost';
-$dbname = 'myhvirtual';
-$user = 'myhvirtual';
-$pass = 'uPLtaPntlDJnThpf';
+require_once __DIR__ . '/config_bd.php';
+require_once __DIR__ . '/seguridad.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
@@ -105,6 +103,11 @@ try {
     if (isset($_GET['eliminar_id']) && is_numeric($_GET['eliminar_id'])) {
         if ($_SESSION['rol'] === 'Invitado') {
             die("Acceso denegado: Los invitados no tienen permiso para eliminar casos.");
+        }
+
+        if (!hv_csrf_valido($_GET['csrf'] ?? null)) {
+            http_response_code(403);
+            die("Solicitud no válida. Recarga la página e inténtalo de nuevo.");
         }
 
         $id_eliminar = intval($_GET['eliminar_id']);
@@ -366,7 +369,7 @@ try {
                                                 <i class="bi bi-pencil"></i>
                                             </button>
 
-                                            <a href="?eliminar_id=<?= $caso['id'] ?>" 
+                                            <a href="?eliminar_id=<?= (int)$caso['id'] ?>&amp;csrf=<?= hv_token_csrf() ?>"
                                                class="btn btn-sm btn-outline-danger" 
                                                onclick="return confirm('¿Deseas eliminar permanentemente este caso clínico?');" 
                                                title="Eliminar Caso">

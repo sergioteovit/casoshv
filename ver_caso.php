@@ -18,10 +18,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 
 $idCaso = intval($_GET['id']);
 
-$host = 'localhost';
-$dbname = 'myhvirtual';
-$user = 'myhvirtual';
-$pass = 'uPLtaPntlDJnThpf';
+require_once __DIR__ . '/config_bd.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);

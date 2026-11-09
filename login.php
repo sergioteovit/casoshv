@@ -41,6 +41,7 @@ $_SESSION['captcha_resultado'] = $num1 + $num2;
                 <div class="alert alert-danger small py-2 text-center">
                     <?php 
                         if($_GET['error'] == 'captcha') echo "El resultado de la verificación matemática es incorrecto.";
+                        elseif($_GET['error'] == 'intentos') echo "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo.";
                         else echo "Usuario o contraseña incorrectos.";
                     ?>
                 </div>

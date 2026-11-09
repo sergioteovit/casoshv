@@ -46,10 +46,8 @@ $estilos_periodos = [
 ];
 
 // Configuración de la BD
-$host = 'localhost';
-$dbname = 'myhvirtual';
-$user = 'myhvirtual';
-$pass = 'uPLtaPntlDJnThpf';
+require_once __DIR__ . '/config_bd.php';
+require_once __DIR__ . '/seguridad.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
@@ -113,6 +111,11 @@ try {
             die("Acceso denegado: Los invitados no tienen permiso para eliminar tarjetas.");
         }
         
+        if (!hv_csrf_valido($_GET['csrf'] ?? null)) {
+            http_response_code(403);
+            die("Solicitud no válida. Recarga la página e inténtalo de nuevo.");
+        }
+
         $id_eliminar = intval($_GET['eliminar_id']);
         
         try {
@@ -525,7 +528,7 @@ try {
                                                     title="Editar tarjeta">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <a href="?eliminar_id=<?= $tarjeta['id'] ?>" 
+                                            <a href="?eliminar_id=<?= (int)$tarjeta['id'] ?>&amp;csrf=<?= hv_token_csrf() ?>"
                                                class="btn btn-sm btn-outline-danger shadow-sm" 
                                                onclick="return confirm('¿Estás seguro de que deseas eliminar la tarjeta de <?= addslashes($nombre) ?> permanentemente?');" 
                                                title="Eliminar tarjeta">

@@ -1,11 +1,9 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 header('Content-Type: application/json');
 
-$host = "localhost";
-$db_name = "myhvirtual";
-$user = "myhvirtual";
-$pass = "uPLtaPntlDJnThpf";
+require_once __DIR__ . '/config_bd.php';
 
 try {
     $conn = new PDO("mysql:host=$host;dbname=$db_name", $user, $pass);
@@ -15,12 +13,38 @@ try {
     exit();
 }
 
+// El rol se consulta en la base (no en la sesión) para que un cambio de rol aplique de inmediato.
+function exigirAdministrador($conn) {
+    $stmt = $conn->prepare("
+        SELECT r.RoleName
+        FROM Users u
+        JOIN Roles r ON u.RoleId = r.RoleId
+        WHERE u.UserId = :userId
+    ");
+    $stmt->execute([':userId' => $_SESSION['UserId'] ?? '']);
+
+    if ($stmt->fetchColumn() !== 'Administrator' || !hv_csrf_valido($_POST['csrf_token'] ?? null)) {
+        http_response_code(403);
+        echo json_encode(["success" => false, "error" => "Acceso no autorizado."]);
+        exit();
+    }
+}
+
 $action = $_POST['action'] ?? '';
 
 // === LOGIN ===
 if ($action === 'login') {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+    $email = trim((string)($_POST['email'] ?? ''));
+    $password = (string)($_POST['password'] ?? '');
+
+    // Límite de intentos fallidos. Se cuenta por cuenta + IP (y un tope mayor por cuenta)
+    // porque un salón completo puede compartir la misma IP.
+    $claveCuenta = 'juego|' . strtolower($email);
+    $claveCuentaIp = $claveCuenta . '|' . ($_SERVER['REMOTE_ADDR'] ?? '');
+    if (hv_limite_excedido($claveCuentaIp, 8, 900) || hv_limite_excedido($claveCuenta, 30, 900)) {
+        echo json_encode(["success" => false, "error" => "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo."]);
+        exit();
+    }
 
     // 1. Obtener los datos del usuario
     $stmt = $conn->prepare("
@@ -55,6 +79,10 @@ if ($action === 'login') {
         $updateLoginStmt->execute([':userId' => $userRow['UserId']]);
         // --------------------------------------------------------------------
 
+        hv_limite_reiniciar($claveCuentaIp);
+        hv_limite_reiniciar($claveCuenta);
+        session_regenerate_id(true);
+
         // 4. Guardar información en la sesión de PHP
         $_SESSION['UserId'] = $userRow['UserId'];
         $_SESSION['Username'] = $userRow['Username'];
@@ -62,6 +90,12 @@ if ($action === 'login') {
         $_SESSION['Progress'] = $userRow['Progress'];
         $_SESSION['Statistics'] = $userRow['Statistics'];
         $_SESSION['CasesDataBase'] = $userRow['CasesDataBase'];
+
+        // El juego guarda el avance del usuario anterior después de iniciar sesión con otro,
+        // así que se recuerdan las últimas cuentas autenticadas en esta sesión.
+        $usuariosAutenticados = $_SESSION['UsuariosAutenticados'] ?? [];
+        $usuariosAutenticados[] = (string)$userRow['UserId'];
+        $_SESSION['UsuariosAutenticados'] = array_slice(array_values(array_unique($usuariosAutenticados)), -5);
         
         // echo json_encode([
         //    "success" => true, 
@@ -98,16 +132,31 @@ if ($action === 'login') {
         ]);
         exit();
     } else {
+        hv_limite_registrar_fallo($claveCuentaIp, 900);
+        hv_limite_registrar_fallo($claveCuenta, 900);
         echo json_encode(["success" => false, "error" => "Credenciales incorrectas."]);
     }
 }
 
 // === REGISTRO ===
 elseif ($action === 'register') {
-    $username = $_POST['username'];
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-    $password_confirm = $_POST['password_confirm'] ?? '';
+    $username = trim((string)($_POST['username'] ?? ''));
+    $email = trim((string)($_POST['email'] ?? ''));
+    $password = (string)($_POST['password'] ?? '');
+    $password_confirm = (string)($_POST['password_confirm'] ?? '');
+
+    if (!preg_match('/^[\p{L}\p{N} ._-]{3,50}$/u', $username)) {
+        echo json_encode(["success" => false, "error" => "El nombre de usuario debe tener de 3 a 50 caracteres: letras, números, espacios, punto, guion o guion bajo."]);
+        exit();
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(["success" => false, "error" => "El correo electrónico no es válido."]);
+        exit();
+    }
+    if (strlen($password) < 8) {
+        echo json_encode(["success" => false, "error" => "La contraseña debe tener al menos 8 caracteres."]);
+        exit();
+    }
 
     // 1. Validación de contraseñas en el backend
     if ($password !== $password_confirm) {
@@ -138,7 +187,7 @@ elseif ($action === 'register') {
     $defaultPrefs = json_encode(["audio" => ["masterVolume" => 1.0], "ui" => ["language" => "es-MX"]]);
     $defaultStats = json_encode(["totalPoints" => 0, "totalStars" => 0, "bronzeStars" => 0]);
     $defaultProg = json_encode(["playerName" => "Player", "gender" => "Neutro", "playerLevel" => 0, "Points" => 0]);
-    $defaultCDB = json_encode([]);
+    $defaultCDB = '{}'; // Debe ser un objeto: JsonUtility de Unity no acepta un arreglo en la raíz
 
     try {
         $conn->beginTransaction();
@@ -149,7 +198,7 @@ elseif ($action === 'register') {
 
         // Insertar datos iniciales del juego
         $stmtData = $conn->prepare("INSERT INTO PlayerData (UserId, Preferences, Statistics, Progress, CasesDataBase) VALUES (?, ?, ?, ?, ?)");
-        $stmtData->execute([$userId, $defaultPrefs, $defaultStats, $defaultProg]);
+        $stmtData->execute([$userId, $defaultPrefs, $defaultStats, $defaultProg, $defaultCDB]);
 
         $conn->commit();
         echo json_encode(["success" => true, "message" => "Cuenta creada exitosamente. Redirigiendo al login..."]);
@@ -168,11 +217,7 @@ elseif ($action === 'recover') {
 // === ADMINISTRACIÓN: ACTUALIZAR USUARIO Y RESETEAR CONTRASEÑA ===
 elseif ($action === 'admin_update_user') {
     // 1. Verificación de Seguridad: Solo administradores pueden ejecutar esto
-    if (!isset($_SESSION['Role']) || $_SESSION['Role'] !== 'Administrator') {
-        http_response_code(403);
-        echo json_encode(["success" => false, "error" => "Acceso no autorizado."]);
-        exit();
-    }
+    exigirAdministrador($conn);
 
     $targetUserId = $_POST['user_id'] ?? '';
     $newUsername  = trim($_POST['username'] ?? '');
@@ -182,6 +227,23 @@ elseif ($action === 'admin_update_user') {
 
     if (empty($targetUserId) || empty($newUsername) || empty($newEmail)) {
         echo json_encode(["success" => false, "error" => "Todos los campos obligatorios deben estar completos."]);
+        exit();
+    }
+
+    $stmtRol = $conn->prepare("SELECT RoleName FROM Roles WHERE RoleId = :roleId");
+    $stmtRol->execute([':roleId' => $newRoleId]);
+    $nuevoRol = $stmtRol->fetchColumn();
+
+    if ($nuevoRol === false) {
+        echo json_encode(["success" => false, "error" => "El rol seleccionado no existe."]);
+        exit();
+    }
+    if ($targetUserId === $_SESSION['UserId'] && $nuevoRol !== 'Administrator') {
+        echo json_encode(["success" => false, "error" => "No puedes quitarte a ti mismo el rol de administrador."]);
+        exit();
+    }
+    if (!empty($newPassword) && strlen($newPassword) < 8) {
+        echo json_encode(["success" => false, "error" => "La contraseña debe tener al menos 8 caracteres."]);
         exit();
     }
 
@@ -241,6 +303,8 @@ elseif ($action === 'admin_update_user') {
 
 // ELIMINAR REGISTRO DE USUARIO
 elseif ($action === 'admin_delete_user') {
+    exigirAdministrador($conn);
+
     $userIdToDelete = $_POST['user_id'] ?? null;
 
     if (!$userIdToDelete) {
@@ -269,9 +333,27 @@ elseif ($action === 'admin_delete_user') {
 // === GUARDAR PROGRESO DEL JUEGO DESDE UNITY ===
 elseif ($action === 'save_progress') {
     $userId     = $_POST['user_id'] ?? '';
-    $progress   = $_POST['progress'] ?? '{}';
-    $statistics = $_POST['statistics'] ?? '{}';
-    $casesDataBase = $_POST['casesDataBase'] ?? '{}';
+    $progress   = $_POST['progress'] ?? null;
+    $statistics = $_POST['statistics'] ?? null;
+    // Si no llega (versiones antiguas del juego) se conserva el valor guardado
+    $casesDataBase = $_POST['casesDataBase'] ?? null;
+
+    // Un guardado incompleto o dañado no debe borrar la partida
+    $jsonValido = function ($valor) {
+        return is_string($valor) && is_array(json_decode($valor, true));
+    };
+    if (!$jsonValido($progress) || !$jsonValido($statistics) || ($casesDataBase !== null && !$jsonValido($casesDataBase))) {
+        echo json_encode(["success" => false, "error" => "Datos de guardado inválidos."]);
+        exit();
+    }
+
+    // TEMPORAL: sin sesión se sigue aceptando para no romper las versiones ya instaladas del juego.
+    // Hay que exigir un token cuando el juego lo envíe.
+    if (isset($_SESSION['UsuariosAutenticados']) && !in_array($userId, $_SESSION['UsuariosAutenticados'], true)) {
+        http_response_code(403);
+        echo json_encode(["success" => false, "error" => "La sesión no corresponde a este usuario."]);
+        exit();
+    }
 
     if (empty($userId)) {
         echo json_encode(["success" => false, "error" => "ID de usuario requerido."]);
@@ -283,7 +365,7 @@ elseif ($action === 'save_progress') {
             UPDATE PlayerData 
             SET Progress = :progress, 
                 Statistics = :statistics,
-                CasesDataBase = :casesDataBase
+                CasesDataBase = COALESCE(:casesDataBase, CasesDataBase)
             WHERE UserId = :userId
         ");
         

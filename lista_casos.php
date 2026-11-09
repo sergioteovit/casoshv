@@ -7,10 +7,8 @@ if (!isset($_SESSION['usuario_id'])) {
 }
 $rolUsuario = $_SESSION['rol']; // 'Invitado', 'Editor', o 'Administrador'
 
-$host = 'localhost';
-$dbname = 'myhvirtual';
-$user = 'myhvirtual';
-$pass = 'uPLtaPntlDJnThpf';
+require_once __DIR__ . '/config_bd.php';
+require_once __DIR__ . '/seguridad.php';
 
 try {
     // Conexión usando PDO para máxima seguridad
@@ -22,6 +20,11 @@ try {
 
 // Procesar eliminación si se recibe el ID por parámetro GET
 if (isset($_GET['eliminar'])) {
+    if ($rolUsuario !== 'Administrador' || !hv_csrf_valido($_GET['csrf'] ?? null)) {
+        http_response_code(403);
+        die("Acceso denegado: no tienes permiso para eliminar casos.");
+    }
+
     $idEliminar = intval($_GET['eliminar']);
     try {
         $stmt = $pdo->prepare("DELETE FROM casos_clinicos WHERE id = :id");
@@ -331,7 +334,7 @@ $totalCasos = $total_casos;
                                             </a>
                                         <?php endif; ?>
                                         <?php if ($rolUsuario !== 'Invitado' && $rolUsuario !== 'Editor'): ?>
-                                            <a href="lista_casos.php?eliminar=<?= $row['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro?');">
+                                            <a href="lista_casos.php?eliminar=<?= (int)$row['id'] ?>&amp;csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro?');">
                                                 <i class="bi bi-trash"></i> Eliminar
                                             </a>
                                         <?php endif; ?>

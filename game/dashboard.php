@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 if (!isset($_SESSION['UserId'])) {
     header("Location: index.php");
@@ -11,12 +12,9 @@ $progress = json_decode($_SESSION['Progress'], true);
 $statistics = json_decode($_SESSION['Statistics'], true);
 
 // 1. Conexión a la base de datos para obtener el Leaderboard
-$host = "localhost";
-$db_name = "myhvirtual";
-$user = "myhvirtual";
-$pass = "uPLtaPntlDJnThpf";
+require_once __DIR__ . '/config_bd.php';
 
-$topPlayers = [];
+$playersRanking = [];
 $allUsers = [];
 $userRankData = null;
 
@@ -104,6 +102,7 @@ try {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?php echo hv_token_csrf(); ?>">
     <title>Hospital Virtual - Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -246,9 +245,9 @@ try {
                 <div class="card-header bg-success text-white">📈 Jugador</div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>Nombre del jugador:</strong> <?php echo $progress['playerName'] ?? ""; ?></li>
-                        <li class="list-group-item"><strong>Género:</strong> <?php echo $progress['gender'] ?? ""; ?></li>
-                        <li class="list-group-item"><strong>Nivel:</strong> <?php echo $progress['playerLevel'] ?? 0; ?></li>
+                        <li class="list-group-item"><strong>Nombre del jugador:</strong> <?php echo htmlspecialchars((string)($progress['playerName'] ?? ""), ENT_QUOTES); ?></li>
+                        <li class="list-group-item"><strong>Género:</strong> <?php echo htmlspecialchars((string)($progress['gender'] ?? ""), ENT_QUOTES); ?></li>
+                        <li class="list-group-item"><strong>Nivel:</strong> <?php echo (int)($progress['playerLevel'] ?? 0); ?></li>
                     </ul>
                 </div>
             </div>
@@ -346,17 +345,20 @@ try {
                                                     <div class="btn-group btn-group-sm" role="group">
                                                         <button class="btn btn-outline-info" title="Descargar Preferencias"
                                                                 data-json="<?php echo htmlspecialchars($userItem['Preferences'] ?? '{}', ENT_QUOTES); ?>"
-                                                                onclick="downloadUserData('<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>_preferences.json', this)">
+                                                                data-nombre="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
+                                                                onclick="downloadUserData(this.dataset.nombre + '_preferences.json', this)">
                                                             <i class="bi bi-gear-fill"></i> Prefs
                                                         </button>
                                                         <button class="btn btn-outline-success" title="Descargar Estadísticas"
                                                                 data-json="<?php echo htmlspecialchars($userItem['Statistics'] ?? '{}', ENT_QUOTES); ?>"
-                                                                onclick="downloadUserData('<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>_statistics.json', this)">
+                                                                data-nombre="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
+                                                                onclick="downloadUserData(this.dataset.nombre + '_statistics.json', this)">
                                                             <i class="bi bi-bar-chart-fill"></i> Stats
                                                         </button>
                                                         <button class="btn btn-outline-warning text-dark" title="Descargar Progreso"
                                                                 data-json="<?php echo htmlspecialchars($userItem['Progress'] ?? '{}', ENT_QUOTES); ?>"
-                                                                onclick="downloadUserData('<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>_progress.json', this)">
+                                                                data-nombre="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
+                                                                onclick="downloadUserData(this.dataset.nombre + '_progress.json', this)">
                                                             <i class="bi bi-controller"></i> Progreso
                                                         </button>
                                                     </div>
@@ -365,16 +367,17 @@ try {
                                                 <td class="text-center">
                                                     <div class="btn-group btn-group-sm" role="group">
                                                         <button class="btn btn-outline-primary" title="Editar Usuario"
-                                                                onclick="openEditModal(
-                                                                    '<?php echo $userItem['UserId']; ?>',
-                                                                    '<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>',
-                                                                    '<?php echo htmlspecialchars($userItem['Email'], ENT_QUOTES); ?>',
-                                                                    '<?php echo $userItem['RoleId']; ?>'
-                                                                )">
+                                                                data-user-id="<?php echo htmlspecialchars($userItem['UserId'], ENT_QUOTES); ?>"
+                                                                data-username="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
+                                                                data-email="<?php echo htmlspecialchars($userItem['Email'], ENT_QUOTES); ?>"
+                                                                data-role-id="<?php echo (int)$userItem['RoleId']; ?>"
+                                                                onclick="openEditModal(this.dataset.userId, this.dataset.username, this.dataset.email, this.dataset.roleId)">
                                                             <i class="bi bi-pencil-square"></i> Editar
                                                         </button>
                                                         <button class="btn btn-outline-danger" title="Eliminar Usuario"
-                                                                onclick="deleteUser('<?php echo $userItem['UserId']; ?>', '<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>')">
+                                                                data-user-id="<?php echo htmlspecialchars($userItem['UserId'], ENT_QUOTES); ?>"
+                                                                data-username="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
+                                                                onclick="deleteUser(this.dataset.userId, this.dataset.username)">
                                                             <i class="bi bi-trash-fill"></i> Eliminar
                                                         </button>
                                                     </div>
@@ -525,6 +528,7 @@ async function saveUserChanges(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     formData.append('action', 'admin_update_user');
+    formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').content);
 
     const alertBox = document.getElementById('modalAlert');
 
@@ -556,6 +560,7 @@ async function deleteUser(userId, username) {
 
     const formData = new FormData();
     formData.append('action', 'admin_delete_user');
+    formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').content);
     formData.append('user_id', userId);
 
     try {

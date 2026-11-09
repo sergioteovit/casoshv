@@ -8,10 +8,19 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] !== 'Administrador') {
     exit;
 }
 
-$host = 'localhost';
-$dbname = 'myhvirtual';
-$user = 'myhvirtual';
-$pass = 'uPLtaPntlDJnThpf';
+require_once __DIR__ . '/config_bd.php';
+require_once __DIR__ . '/seguridad.php';
+
+// Toda acción que modifica datos llega por POST y debe traer el token de esta sesión
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hv_csrf_valido($_POST['csrf_token'] ?? null)) {
+    http_response_code(403);
+    if (($_POST['accion'] ?? '') === 'cambiar_rol') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['status' => 'error', 'message' => 'Solicitud no válida. Recarga la página.']);
+        exit;
+    }
+    die("Solicitud no válida. Recarga la página e inténtalo de nuevo.");
+}
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
@@ -83,10 +92,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
 }
 
 // --- PROCESAR ELIMINACIÓN DE USUARIO ---
-if (isset($_GET['eliminar'])) {
-    $idEliminar = intval($_GET['eliminar']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'eliminar') {
+    $idEliminar = intval($_POST['id_usuario'] ?? 0);
     // Evitar que el administrador se elimine a sí mismo por error
-    if ($idEliminar !== $_SESSION['usuario_id']) {
+    if ($idEliminar !== intval($_SESSION['usuario_id'])) {
         $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = ?");
         $stmt->execute([$idEliminar]);
         header("Location: gestion_usuarios.php?msg=deleted");
@@ -99,17 +108,17 @@ if (isset($_GET['eliminar'])) {
 // ==========================================
 // PROCESAR RESTABLECIMIENTO DE CONTRASEÑA
 // ==========================================
-if (isset($_GET['reset_id']) && is_numeric($_GET['reset_id'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'restablecer') {
 
     // 🔒 SEGURIDAD: Solo el Administrador puede hacer esto
     if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'Administrador') {
         die("Acceso denegado: Solo los Administradores pueden restablecer contraseñas.");
     }
 
-    $id_reset = intval($_GET['reset_id']);
+    $id_reset = intval($_POST['id_usuario'] ?? 0);
 
-    // Definir la contraseña temporal por defecto
-    $password_temporal = 'Usuario123!';
+    // Contraseña temporal aleatoria: se muestra una sola vez al administrador
+    $password_temporal = bin2hex(random_bytes(8));
     // Encriptar la contraseña de forma segura usando el algoritmo nativo de PHP
     $password_hash = password_hash($password_temporal, PASSWORD_DEFAULT);
 
@@ -121,6 +130,8 @@ if (isset($_GET['reset_id']) && is_numeric($_GET['reset_id'])) {
             ':hash' => $password_hash,
             ':id' => $id_reset
         ]);
+
+        $_SESSION['password_temporal'] = $password_temporal;
 
         // Redirigir para limpiar la URL y mostrar mensaje de éxito
         header("Location: gestion_usuarios.php?msg=pass_reset");
@@ -181,11 +192,14 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="alert alert-success alert-dismissible fade show">Usuario eliminado correctamente.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
     <!-- ALERTA DE CONTRASEÑA RESTABLECIDA -->
-    <?php if (isset($_GET['msg']) && $_GET['msg'] === 'pass_reset'): ?>
+    <?php if (isset($_SESSION['password_temporal'])):
+        $passwordTemporal = $_SESSION['password_temporal'];
+        unset($_SESSION['password_temporal']);
+    ?>
         <div class="alert alert-warning alert-dismissible fade show shadow-sm border-warning" role="alert">
             <i class="bi bi-key-fill me-2 fs-5"></i> 
             <strong>Contraseña restablecida con éxito.</strong> 
-            La nueva contraseña temporal de este usuario es: <code class="fs-5 bg-white px-2 py-1 rounded text-dark border">Usuario123!</code><br>
+            La nueva contraseña temporal de este usuario es: <code class="fs-5 bg-white px-2 py-1 rounded text-dark border"><?= htmlspecialchars($passwordTemporal) ?></code> (solo se muestra esta vez)<br>
             <small>Pide al usuario que inicie sesión y la cambie lo antes posible.</small>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
@@ -225,17 +239,26 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <td class="text-center">
                             <!-- BOTÓN RESTABLECER CONTRASEÑA (Solo Admin) -->
                             <?php if ($_SESSION['rol'] === 'Administrador'): ?>
-                                <a href="?reset_id=<?= $user['id'] ?>" 
-                                   class="btn btn-sm btn-outline-warning shadow-sm" 
-                                   onclick="return confirm('¿Estás seguro de que deseas restablecer la contraseña de <?= htmlspecialchars($user['usuario'] ?? 'este usuario') ?>? La nueva contraseña será \'Usuario123!\'');" 
-                                   title="Restablecer Contraseña">
-                                    <i class="bi bi-key"></i>
-                                </a>
+                                <form method="POST" action="gestion_usuarios.php" class="d-inline"
+                                      data-usuario="<?= htmlspecialchars($user['usuario'] ?? 'este usuario', ENT_QUOTES) ?>"
+                                      onsubmit="return confirm('¿Estás seguro de que deseas restablecer la contraseña de ' + this.dataset.usuario + '? Se generará una contraseña temporal.');">
+                                    <input type="hidden" name="csrf_token" value="<?= hv_token_csrf() ?>">
+                                    <input type="hidden" name="accion" value="restablecer">
+                                    <input type="hidden" name="id_usuario" value="<?= (int)$user['id'] ?>">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning shadow-sm" title="Restablecer Contraseña">
+                                        <i class="bi bi-key"></i>
+                                    </button>
+                                </form>
                             <?php endif; ?>
-                            <?php if ($user['id'] !== $_SESSION['usuario_id']): ?>
-                                <a href="eliminar_usuario.php?id=<?= $user['id'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar usuario?');">
-                                    <i class="bi bi-trash"></i>
-                                </a>
+                            <?php if (intval($user['id']) !== intval($_SESSION['usuario_id'])): ?>
+                                <form method="POST" action="gestion_usuarios.php" class="d-inline" onsubmit="return confirm('¿Eliminar usuario?');">
+                                    <input type="hidden" name="csrf_token" value="<?= hv_token_csrf() ?>">
+                                    <input type="hidden" name="accion" value="eliminar">
+                                    <input type="hidden" name="id_usuario" value="<?= (int)$user['id'] ?>">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar usuario">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -256,6 +279,7 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
       <form action="gestion_usuarios.php" method="POST">
           <div class="modal-body">
               <input type="hidden" name="accion" value="crear">
+              <input type="hidden" name="csrf_token" value="<?= hv_token_csrf() ?>">
               
               <div class="row mb-3">
                   <div class="col-md-6">
@@ -324,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Preparar los datos del formulario
             const formData = new FormData();
             formData.append('accion', 'cambiar_rol');
+            formData.append('csrf_token', '<?= hv_token_csrf() ?>');
             formData.append('id_usuario', idUsuario);
             formData.append('nuevo_rol', nuevoRol);
 

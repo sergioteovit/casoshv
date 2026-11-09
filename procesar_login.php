@@ -1,12 +1,10 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // Configuración de la BD
 
-$host = 'localhost';
-$dbname = 'myhvirtual';
-$user = 'myhvirtual';
-$pass = 'uPLtaPntlDJnThpf';
+require_once __DIR__ . '/config_bd.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
@@ -21,8 +19,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $captcha_ingresado = intval($_POST['captcha']);
     
     // Verificar Captcha
-    if ($captcha_ingresado !== $_SESSION['captcha_resultado']) {
+    $captcha_esperado = $_SESSION['captcha_resultado'] ?? null;
+    unset($_SESSION['captcha_resultado']); // Cada operación sirve para un solo intento
+    if ($captcha_ingresado !== $captcha_esperado) {
         header("Location: login.php?error=captcha");
+        exit;
+    }
+
+    // Límite de intentos fallidos por cuenta + IP y por cuenta
+    $claveCuenta = 'gestor|' . strtolower(trim((string)$usuario));
+    $claveCuentaIp = $claveCuenta . '|' . ($_SERVER['REMOTE_ADDR'] ?? '');
+    if (hv_limite_excedido($claveCuentaIp, 8, 900) || hv_limite_excedido($claveCuenta, 30, 900)) {
+        header("Location: login.php?error=intentos");
         exit;
     }
 
@@ -33,6 +41,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Verificar contraseña (usando password_verify para mayor seguridad)
     if ($user && password_verify($password, $user['password'])) {
+        hv_limite_reiniciar($claveCuentaIp);
+        hv_limite_reiniciar($claveCuenta);
+        session_regenerate_id(true);
+
         // Guardar datos en sesión
         $_SESSION['usuario_id'] = $user['id'];
         $_SESSION['usuario'] = $user['usuario'];
@@ -42,6 +54,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         header("Location: lista_casos.php");
         exit;
     } else {
+        hv_limite_registrar_fallo($claveCuentaIp, 900);
+        hv_limite_registrar_fallo($claveCuenta, 900);
         header("Location: login.php?error=credenciales");
         exit;
     }

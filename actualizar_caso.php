@@ -10,10 +10,7 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
 
 header('Content-Type: application/json; charset=utf-8');
 
-$host = 'localhost';
-$dbname = 'myhvirtual';
-$user = 'myhvirtual';
-$pass = 'uPLtaPntlDJnThpf';
+require_once __DIR__ . '/config_bd.php';
 
 // Asegurar que recibimos el ID del caso a actualizar
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_caso'])) {
