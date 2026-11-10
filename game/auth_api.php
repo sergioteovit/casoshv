@@ -96,7 +96,37 @@ if ($action === 'login') {
         $usuariosAutenticados = $_SESSION['UsuariosAutenticados'] ?? [];
         $usuariosAutenticados[] = (string)$userRow['UserId'];
         $_SESSION['UsuariosAutenticados'] = array_slice(array_values(array_unique($usuariosAutenticados)), -5);
-        
+
+        // Token con el que el juego firma sus guardados. Solo se guarda su huella.
+        // Si la tabla no está disponible, el login sigue funcionando sin token.
+        $tokenJuego = '';
+        try {
+            $tokenNuevo = bin2hex(random_bytes(32));
+            $conn->exec("DELETE FROM EstSesionesJuego WHERE ExpiraEn < NOW()");
+            $stmtToken = $conn->prepare("
+                INSERT INTO EstSesionesJuego (TokenHash, UserId, ExpiraEn)
+                VALUES (?, ?, NOW() + INTERVAL 30 DAY)
+            ");
+            $stmtToken->execute([hash('sha256', $tokenNuevo), $userRow['UserId']]);
+
+            // Cada cuenta conserva sus 10 sesiones más recientes
+            $stmtToken = $conn->prepare("
+                DELETE FROM EstSesionesJuego
+                WHERE UserId = ? AND TokenHash NOT IN (
+                    SELECT TokenHash FROM (
+                        SELECT TokenHash FROM EstSesionesJuego
+                        WHERE UserId = ?
+                        ORDER BY CreadoEn DESC
+                        LIMIT 10
+                    ) AS recientes
+                )
+            ");
+            $stmtToken->execute([$userRow['UserId'], $userRow['UserId']]);
+            $tokenJuego = $tokenNuevo;
+        } catch (Throwable $e) {
+            error_log('[sesiones] Login: ' . $e->getMessage());
+        }
+
         // echo json_encode([
         //    "success" => true, 
         //    "message" => "Conectando...",
@@ -128,7 +158,8 @@ if ($action === 'login') {
             "role"       => (string)($userRow['RoleName'] ?? 'Player'),
             "progress"   => $rawProgress,
             "statistics" => $rawStatistics,
-            "casesDataBase" => $rawCasesDataBase
+            "casesDataBase" => $rawCasesDataBase,
+            "token"      => $tokenJuego
         ]);
         exit();
     } else {
@@ -347,8 +378,11 @@ elseif ($action === 'save_progress') {
         exit();
     }
 
-    // TEMPORAL: sin sesión se sigue aceptando para no romper las versiones ya instaladas del juego.
-    // Hay que exigir un token cuando el juego lo envíe.
+    // TEMPORAL: las versiones del juego instaladas antes del token no lo envían. Se les sigue
+    // guardando la partida para que nadie pierda avance, pero sus datos no llegan a las posiciones.
+    // Cambiar a false cuando todos los jugadores tengan la versión con token.
+    $aceptarGuardadoSinToken = true;
+
     if (isset($_SESSION['UsuariosAutenticados']) && !in_array($userId, $_SESSION['UsuariosAutenticados'], true)) {
         http_response_code(403);
         echo json_encode(["success" => false, "error" => "La sesión no corresponde a este usuario."]);
@@ -360,9 +394,48 @@ elseif ($action === 'save_progress') {
         exit();
     }
 
+    $token = (string)($_POST['token'] ?? '');
+    $tokenValido = false;
+    $tokenNoVerificable = false;
+
+    if ($token !== '') {
+        try {
+            $stmt = $conn->prepare("
+                SELECT 1 FROM EstSesionesJuego
+                WHERE TokenHash = ? AND UserId = ? AND ExpiraEn >= NOW()
+            ");
+            $stmt->execute([hash('sha256', $token), $userId]);
+            $tokenValido = (bool)$stmt->fetchColumn();
+
+            if ($tokenValido) {
+                // La sesión dura 30 días desde el último guardado
+                $stmt = $conn->prepare("
+                    UPDATE EstSesionesJuego
+                    SET UltimoUso = NOW(), ExpiraEn = NOW() + INTERVAL 30 DAY
+                    WHERE TokenHash = ?
+                ");
+                $stmt->execute([hash('sha256', $token)]);
+            }
+        } catch (Throwable $e) {
+            // Una falla del servidor no debe impedir guardar: se guarda sin actualizar posiciones
+            $tokenNoVerificable = true;
+            error_log('[sesiones] Guardado: ' . $e->getMessage());
+        }
+
+        if (!$tokenValido && !$tokenNoVerificable) {
+            http_response_code(403);
+            echo json_encode(["success" => false, "error" => "La sesión del juego no es válida. Vuelve a iniciar sesión."]);
+            exit();
+        }
+    } elseif (!$aceptarGuardadoSinToken) {
+        http_response_code(403);
+        echo json_encode(["success" => false, "error" => "Actualiza el juego para seguir guardando tu avance."]);
+        exit();
+    }
+
     try {
         $stmt = $conn->prepare("
-            UPDATE PlayerData 
+            UPDATE PlayerData
             SET Progress = :progress, 
                 Statistics = :statistics,
                 CasesDataBase = COALESCE(:casesDataBase, CasesDataBase)
@@ -380,13 +453,16 @@ elseif ($action === 'save_progress') {
 
         // La partida ya quedó guardada: si esta copia falla, el jugador no debe notarlo.
         // Conexión propia porque las tablas Est* necesitan utf8mb4 y la de arriba no lo declara.
-        try {
-            require_once __DIR__ . '/estadisticas_sync.php';
-            $connEstadisticas = new PDO("mysql:host=$host;dbname=$db_name;charset=utf8mb4", $user, $pass);
-            $connEstadisticas->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            est_sincronizar($connEstadisticas, $userId, $statistics, $casesDataBase);
-        } catch (Throwable $e) {
-            error_log('[estadisticas] Guardado: ' . $e->getMessage());
+        // Solo los guardados con token válido llegan a las posiciones.
+        if ($tokenValido) {
+            try {
+                require_once __DIR__ . '/estadisticas_sync.php';
+                $connEstadisticas = new PDO("mysql:host=$host;dbname=$db_name;charset=utf8mb4", $user, $pass);
+                $connEstadisticas->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                est_sincronizar($connEstadisticas, $userId, $statistics, $casesDataBase);
+            } catch (Throwable $e) {
+                error_log('[estadisticas] Guardado: ' . $e->getMessage());
+            }
         }
     } catch (PDOException $e) {
         echo json_encode(["success" => false, "error" => "Error al guardar en la base de datos."]);

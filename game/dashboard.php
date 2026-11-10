@@ -117,6 +117,9 @@ try {
             <span class="badge bg-light text-dark ms-1"><?php echo htmlspecialchars($userRole); ?></span> | 
             <a href="mi_avance.php" class="text-white text-decoration-none ms-2">Mi avance</a> |
             <a href="mis_grupos.php" class="text-white text-decoration-none ms-2">Grupos</a> |
+            <?php if ($userRole === 'Administrator'): ?>
+                <a href="administracion.php" class="text-white text-decoration-none ms-2">Administración</a> |
+            <?php endif; ?>
             <a href="logout.php" class="text-white text-decoration-none ms-2">Cerrar Sesión</a>
         </span>
     </div>
