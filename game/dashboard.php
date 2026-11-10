@@ -115,6 +115,8 @@ try {
         <span class="navbar-text text-white">
             Dr. <?php echo htmlspecialchars($_SESSION['Username']); ?> 
             <span class="badge bg-light text-dark ms-1"><?php echo htmlspecialchars($userRole); ?></span> | 
+            <a href="mi_avance.php" class="text-white text-decoration-none ms-2">Mi avance</a> |
+            <a href="mis_grupos.php" class="text-white text-decoration-none ms-2">Grupos</a> |
             <a href="logout.php" class="text-white text-decoration-none ms-2">Cerrar Sesión</a>
         </span>
     </div>
@@ -334,7 +336,7 @@ try {
                                                 <td>
                                                     <span class="badge <?php 
                                                         echo $userItem['RoleName'] === 'Administrator' ? 'bg-danger' : 
-                                                            ($userItem['RoleName'] === 'Editor' ? 'bg-warning text-dark' : 'bg-primary'); 
+                                                            ($userItem['RoleName'] === 'Revisor' ? 'bg-warning text-dark' : 'bg-primary'); 
                                                     ?>">
                                                         <?php echo $userItem['RoleName']; ?>
                                                     </span>
@@ -461,7 +463,7 @@ try {
                                 <label class="form-label">Rol de Usuario</label>
                                 <select class="form-select" id="editRoleId" name="role_id" required>
                                     <option value="1">Player</option>
-                                    <option value="2">Editor</option>
+                                    <option value="2">Revisor</option>
                                     <option value="3">Administrator</option>
                                 </select>
                             </div>

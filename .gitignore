@@ -1,1 +1,3 @@
 config.local.php
+# Los títulos de los casos revelan el diagnóstico: el repositorio es público
+game/sql/002_catalogos.sql
