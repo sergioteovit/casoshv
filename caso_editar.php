@@ -167,12 +167,13 @@ try {
                    name="identificador" 
                    id="identificador" 
                    class="form-control" 
-                   placeholder="<?= $rolUsuario === 'Administrador' ? 'Ej. MED-2026-001' : 'Asignado automáticamente por el sistema' ?>">
+                   placeholder="<?= $rolUsuario === 'Administrador' ? 'Ej. MED-2026-001' : 'Lo asigna un administrador' ?>"
+                   <?= $rolUsuario === 'Administrador' ? '' : 'disabled' ?>>
 
             <?php if ($rolUsuario !== 'Administrador'): ?>
                 <div class="form-text text-muted small">
-                    <i class="bi bi-lock-fill text-warning me-1"></i> 
-                    <strong><?= $rolUsuario ?></strong>: Preguntar al administrador sobre la edición de este valor.
+                    <i class="bi bi-lock-fill text-warning me-1"></i>
+                    <strong><?= htmlspecialchars($rolUsuario) ?></strong>: solo un administrador puede asignar o cambiar este valor.
                 </div>
             <?php endif; ?>
         </div>

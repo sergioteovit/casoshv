@@ -14,6 +14,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/subidas.php';
 require_once __DIR__ . '/seguridad.php';
+require_once __DIR__ . '/identificador_caso.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
@@ -62,6 +63,14 @@ try {
             echo json_encode(['status' => 'error', 'message' => 'Los datos del caso no tienen un formato válido. No se guardó nada.']);
             exit;
         }
+
+        // Identificador: solo lo asigna el Administrador y no puede repetirse
+        $revision = hv_identificador_aplicar($pdo, $datosJson, $_SESSION['rol'], null);
+        if ($revision['error'] !== null) {
+            echo json_encode(['status' => 'error', 'message' => $revision['error']]);
+            exit;
+        }
+        $datosJson = $revision['json'];
 
         // 3. PROCESAR SUBIDA DE ARCHIVOS (solo imágenes, PDF y Word; si uno no es válido no se guarda nada)
         $validacion = hv_subidas_validar('archivos');

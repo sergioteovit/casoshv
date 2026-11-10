@@ -137,7 +137,7 @@ require_once __DIR__ . '/seguridad.php';
                    name="identificador" 
                    id="identificador" 
                    class="form-control" 
-                   placeholder="<?= $rolUsuario === 'Administrador' ? 'Ej. MED-2026-001' : 'Asignado automáticamente por el sistema' ?>" 
+                   placeholder="<?= $rolUsuario === 'Administrador' ? 'Ej. MED-2026-001' : 'Lo asigna un administrador' ?>" 
                    <?= $rolUsuario === 'Administrador' ? 'required' : 'disabled' ?>>
 
             <?php if ($rolUsuario !== 'Administrador'): ?>

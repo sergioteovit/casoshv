@@ -114,8 +114,9 @@ try {
     // ==========================================
     if (isset($_GET['eliminar_id']) && is_numeric($_GET['eliminar_id'])) {
         
-        if ($_SESSION['rol'] === 'Invitado') {
-            die("Acceso denegado: Los invitados no tienen permiso para eliminar tarjetas.");
+        if ($_SESSION['rol'] !== 'Administrador') {
+            http_response_code(403);
+            die("Acceso denegado: solo los administradores pueden eliminar tarjetas.");
         }
         
         if (!hv_csrf_valido($_GET['csrf'] ?? null)) {
@@ -535,12 +536,14 @@ try {
                                                     title="Editar tarjeta">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
+                                            <?php if ($_SESSION['rol'] === 'Administrador'): ?>
                                             <a href="?eliminar_id=<?= (int)$tarjeta['id'] ?>&amp;csrf=<?= hv_token_csrf() ?>"
-                                               class="btn btn-sm btn-outline-danger shadow-sm" 
-                                               onclick="return confirm('¿Estás seguro de que deseas eliminar la tarjeta de <?= addslashes($nombre) ?> permanentemente?');" 
+                                               class="btn btn-sm btn-outline-danger shadow-sm"
+                                               onclick="return confirm(<?= htmlspecialchars(json_encode('¿Estás seguro de que deseas eliminar la tarjeta de ' . $nombre . ' permanentemente?', JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>);"
                                                title="Eliminar tarjeta">
                                                 <i class="bi bi-trash"></i>
                                             </a>
+                                            <?php endif; ?>
                                         <?php else: ?>
                                             <span class="text-muted small"><i class="bi bi-dash"></i></span>
                                         <?php endif; ?>

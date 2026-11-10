@@ -102,8 +102,9 @@ try {
     // PROCESAR ELIMINACIÓN DE CASO
     // ==========================================
     if (isset($_GET['eliminar_id']) && is_numeric($_GET['eliminar_id'])) {
-        if ($_SESSION['rol'] === 'Invitado') {
-            die("Acceso denegado: Los invitados no tienen permiso para eliminar casos.");
+        if ($_SESSION['rol'] !== 'Administrador') {
+            http_response_code(403);
+            die("Acceso denegado: solo los administradores pueden eliminar casos.");
         }
 
         if (!hv_csrf_valido($_GET['csrf'] ?? null)) {
@@ -375,12 +376,14 @@ try {
                                                 <i class="bi bi-pencil"></i>
                                             </button>
 
+                                            <?php if ($_SESSION['rol'] === 'Administrador'): ?>
                                             <a href="?eliminar_id=<?= (int)$caso['id'] ?>&amp;csrf=<?= hv_token_csrf() ?>"
-                                               class="btn btn-sm btn-outline-danger" 
-                                               onclick="return confirm('¿Deseas eliminar permanentemente este caso clínico?');" 
+                                               class="btn btn-sm btn-outline-danger"
+                                               onclick="return confirm('¿Deseas eliminar permanentemente este caso clínico?');"
                                                title="Eliminar Caso">
                                                 <i class="bi bi-trash"></i>
                                             </a>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </div>
                                 </td>

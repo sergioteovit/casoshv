@@ -13,6 +13,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/subidas.php';
 require_once __DIR__ . '/seguridad.php';
+require_once __DIR__ . '/identificador_caso.php';
 
 // Asegurar que recibimos el ID del caso a actualizar
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hv_csrf_valido($_POST['csrf_token'] ?? null)) {
@@ -38,6 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_caso'])) {
             echo json_encode(['status' => 'error', 'message' => 'Los datos del caso no tienen un formato válido. No se guardó nada.']);
             exit;
         }
+
+        // Identificador: solo lo cambia el Administrador, se conserva si no llega y no puede repetirse
+        $revision = hv_identificador_aplicar($pdo, $datosJson, $_SESSION['rol'], $idCaso);
+        if ($revision['error'] !== null) {
+            echo json_encode(['status' => 'error', 'message' => $revision['error']]);
+            exit;
+        }
+        $datosJson = $revision['json'];
         
         /*if ($_SESSION['rol'] === 'Administrador') {
             // Si es Administrador, procesamos el valor que editó en el formulario
