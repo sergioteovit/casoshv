@@ -120,139 +120,145 @@ try {
 }
 
 $tarjetas = [
-    'Lugar general'     => $posicion !== null ? '#' . number_format($posicion) : '—',
-    'Puntos'            => number_format((int)$jugador['TotalPuntos']),
-    'Estrellas'         => number_format((int)$jugador['TotalEstrellas']),
-    'Retos completados' => number_format((int)$jugador['RetosCompletados']),
-    'Insignias'         => number_format((int)$jugador['TotalInsignias']),
+    ['Lugar general', $posicion !== null ? '#' . number_format($posicion) : '—', 'bi-trophy', 'hv-icono-oro'],
+    ['Puntos', number_format((int)$jugador['TotalPuntos']), 'bi-lightning-charge', ''],
+    ['Estrellas', number_format((int)$jugador['TotalEstrellas']), 'bi-star', 'hv-icono-oro'],
+    ['Retos completados', number_format((int)$jugador['RetosCompletados']), 'bi-flag', 'hv-icono-turquesa'],
+    ['Insignias', number_format((int)$jugador['TotalInsignias']), 'bi-award', 'hv-icono-coral'],
 ];
 $medallas = ['Bronce', 'Plata', 'Oro', 'Platino', 'Diamante'];
+
+require_once __DIR__ . '/plantilla.php';
+hv_encabezado('Mi avance', 'avance');
+hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Desafío Clínico.', 'bi-graph-up-arrow', 'assets/img/ilustracion-avance.png');
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospital Virtual - Mi avance</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-
-<nav class="navbar navbar-dark bg-primary">
-    <div class="container">
-        <span class="navbar-brand">🏥 Hospital Virtual</span>
-        <span class="navbar-text text-white">
-            <a href="posiciones.php" class="text-white text-decoration-none">Posiciones</a> |
-            <a href="mis_grupos.php" class="text-white text-decoration-none">Grupos</a> |
-            <a href="dashboard.php" class="text-white text-decoration-none">Panel</a> |
-            <a href="logout.php" class="text-white text-decoration-none">Cerrar sesión</a>
-        </span>
-    </div>
-</nav>
-
-<main class="container mt-4 mb-5">
-    <h1 class="h3">Mi avance</h1>
-    <p class="text-muted"><?php echo h($jugador['Username']); ?></p>
-
+<main class="container position-relative">
     <?php if (isset($_GET['guardado'])): ?>
-        <div class="alert alert-success" role="status">Tu preferencia quedó guardada.</div>
+        <div class="alert alert-success shadow-sm" role="status"><i class="bi bi-check-circle me-1"></i>Tu preferencia quedó guardada.</div>
     <?php endif; ?>
 
-    <div class="row row-cols-2 row-cols-md-5 g-3 mb-3">
-        <?php foreach ($tarjetas as $nombre => $valor): ?>
+    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-4">
+        <?php foreach ($tarjetas as $i => $t): ?>
             <div class="col">
-                <div class="card shadow-sm h-100 text-center">
-                    <div class="card-body">
-                        <div class="h4 mb-0"><?php echo h($valor); ?></div>
-                        <div class="text-muted small"><?php echo h($nombre); ?></div>
+                <div class="hv-tarjeta hv-tarjeta-animada hv-dato h-100 hv-aparecer">
+                    <span class="hv-icono <?php echo h($t[3]); ?>"><i class="bi <?php echo h($t[2]); ?>"></i></span>
+                    <div>
+                        <div class="hv-numero"><?php echo h($t[1]); ?></div>
+                        <div class="hv-rotulo"><?php echo h($t[0]); ?></div>
                     </div>
                 </div>
             </div>
         <?php endforeach; ?>
     </div>
 
-    <p class="text-muted small">
-        <?php foreach ($medallas as $i => $medalla): ?>
-            <?php echo $i > 0 ? '·' : ''; ?> <?php echo h($medalla); ?>: <strong><?php echo (int)$jugador[$medalla]; ?></strong>
-        <?php endforeach; ?>
-    </p>
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <section class="hv-tarjeta mb-4">
+                <div class="hv-tarjeta-encabezado"><i class="bi bi-flag me-2 text-primary"></i>Mis retos</div>
+                <?php if (!$retos): ?>
+                    <div class="hv-vacio">
+                        <img src="assets/img/mascota-trofeo.png" alt="">
+                        <div class="fw-bold">Todavía no tienes retos registrados.</div>
+                        <div class="small">Juega un caso clínico o un minijuego y tu resultado aparecerá aquí.</div>
+                    </div>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle hv-tabla">
+                            <thead>
+                                <tr>
+                                    <th>Reto</th>
+                                    <th>Sistema</th>
+                                    <th class="col-numero">Mejor puntaje</th>
+                                    <th>Nivel</th>
+                                    <th class="col-numero">Intentos</th>
+                                    <th class="col-numero">Victorias</th>
+                                    <th>Última vez</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($retos as $reto): ?>
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold"><?php echo h($reto['Titulo']); ?></div>
+                                            <span class="hv-chip<?php echo $reto['Tipo'] === 'caso' ? '' : ' hv-chip-turquesa'; ?>"><?php echo $reto['Tipo'] === 'caso' ? 'Caso clínico' : 'Minijuego'; ?></span>
+                                        </td>
+                                        <td><?php echo h(est_nombre_sistema($reto['Sistema'])); ?></td>
+                                        <td class="col-numero fw-bold"><?php echo number_format((int)$reto['MejorPuntaje']); ?></td>
+                                        <td><?php echo hv_nivel($reto['MejorEstrellas']); ?></td>
+                                        <td class="col-numero"><?php echo number_format((int)$reto['Intentos']); ?></td>
+                                        <td class="col-numero"><?php echo number_format((int)$reto['Victorias']); ?></td>
+                                        <td class="text-muted small"><?php echo h(fecha_corta($reto['ActualizadoEn'])); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </section>
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h2 class="h5">Tablas de posiciones</h2>
-            <?php if (!$participa): ?>
-                <p class="mb-0 text-muted">Esta cuenta no participa en las tablas de posiciones.</p>
-            <?php else: ?>
-                <p>
-                    <?php echo $mostrar
-                        ? 'Tu nombre de usuario aparece en las tablas públicas de posiciones.'
-                        : 'Tu nombre de usuario no aparece en las tablas públicas de posiciones.'; ?>
-                    Tus resultados se guardan igual.
-                </p>
-                <form method="POST">
-                    <input type="hidden" name="csrf_token" value="<?php echo h(hv_token_csrf()); ?>">
-                    <input type="hidden" name="mostrar" value="<?php echo $mostrar ? '0' : '1'; ?>">
-                    <button type="submit" class="btn btn-outline-primary">
-                        <?php echo $mostrar ? 'No aparecer en las posiciones' : 'Aparecer en las posiciones'; ?>
-                    </button>
-                </form>
-            <?php endif; ?>
+            <section class="hv-tarjeta">
+                <div class="hv-tarjeta-encabezado"><i class="bi bi-award me-2 text-primary"></i>Mis insignias</div>
+                <?php if (!$insignias): ?>
+                    <div class="hv-vacio">
+                        <i class="bi bi-award"></i>
+                        <div class="fw-bold">Todavía no tienes insignias.</div>
+                        <div class="small">Se ganan por precisión, buen razonamiento clínico y constancia.</div>
+                    </div>
+                <?php else: ?>
+                    <div class="row g-3 p-3">
+                        <?php foreach ($insignias as $insignia): ?>
+                            <div class="col-sm-6">
+                                <div class="d-flex gap-3 p-3 rounded-3 h-100" style="background: var(--hv-fondo)">
+                                    <span class="hv-icono hv-icono-turquesa"><i class="bi bi-award-fill"></i></span>
+                                    <div>
+                                        <div class="fw-bold"><?php echo h($insignia['Nombre']); ?></div>
+                                        <div class="small text-muted"><?php echo h($insignia['Descripcion']); ?></div>
+                                        <div class="hv-logro-tiempo mt-1">Obtenida el <?php echo h(fecha_corta($insignia['ObtenidaEn'])); ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </section>
         </div>
-    </div>
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-header fw-bold">Mis retos</div>
-        <div class="table-responsive">
-            <table class="table table-striped align-middle mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Reto</th>
-                        <th>Sistema</th>
-                        <th class="text-end">Mejor puntaje</th>
-                        <th>Nivel</th>
-                        <th class="text-end">Intentos</th>
-                        <th class="text-end">Victorias</th>
-                        <th>Última actividad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!$retos): ?>
-                        <tr><td colspan="7" class="text-center text-muted py-4">Todavía no tienes retos registrados.</td></tr>
-                    <?php endif; ?>
-                    <?php foreach ($retos as $reto): ?>
-                        <tr>
-                            <td>
-                                <?php echo h($reto['Titulo']); ?>
-                                <span class="badge text-bg-secondary"><?php echo $reto['Tipo'] === 'caso' ? 'Caso' : 'Minijuego'; ?></span>
-                            </td>
-                            <td><?php echo h(est_nombre_sistema($reto['Sistema'])); ?></td>
-                            <td class="text-end"><?php echo number_format((int)$reto['MejorPuntaje']); ?></td>
-                            <td><?php echo h(est_nombre_nivel($reto['MejorEstrellas']) ?? 'Sin estrellas'); ?></td>
-                            <td class="text-end"><?php echo number_format((int)$reto['Intentos']); ?></td>
-                            <td class="text-end"><?php echo number_format((int)$reto['Victorias']); ?></td>
-                            <td><?php echo h(fecha_corta($reto['ActualizadoEn'])); ?></td>
-                        </tr>
+        <div class="col-lg-4">
+            <section class="hv-tarjeta p-4 mb-4">
+                <h2 class="h6 mb-3"><i class="bi bi-stars me-2 text-warning"></i>Mi medallero</h2>
+                <div class="d-flex flex-column gap-2">
+                    <?php foreach ($medallas as $i => $medalla): ?>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <?php echo hv_nivel($i + 1); ?>
+                            <span class="fw-bold"><?php echo (int)$jugador[$medalla]; ?> <span class="text-muted fw-normal small"><?php echo (int)$jugador[$medalla] === 1 ? 'reto' : 'retos'; ?></span></span>
+                        </div>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                </div>
+            </section>
 
-    <div class="card shadow-sm">
-        <div class="card-header fw-bold">Mis insignias</div>
-        <ul class="list-group list-group-flush">
-            <?php if (!$insignias): ?>
-                <li class="list-group-item text-muted">Todavía no tienes insignias.</li>
-            <?php endif; ?>
-            <?php foreach ($insignias as $insignia): ?>
-                <li class="list-group-item">
-                    <strong><?php echo h($insignia['Nombre']); ?></strong>
-                    <span class="text-muted small">· <?php echo h(fecha_corta($insignia['ObtenidaEn'])); ?></span>
-                    <div class="small"><?php echo h($insignia['Descripcion']); ?></div>
-                </li>
-            <?php endforeach; ?>
-        </ul>
+            <section class="hv-tarjeta p-4">
+                <h2 class="h6 mb-2"><i class="bi bi-eye me-2 text-primary"></i>Tablas de posiciones</h2>
+                <?php if (!$participa): ?>
+                    <p class="mb-0 text-muted small">Esta cuenta no participa en las tablas de posiciones.</p>
+                <?php else: ?>
+                    <p class="small mb-3">
+                        <?php echo $mostrar
+                            ? 'Tu nombre de usuario aparece en las tablas públicas de posiciones.'
+                            : 'Tu nombre de usuario no aparece en las tablas públicas de posiciones.'; ?>
+                        Tus resultados se guardan igual.
+                    </p>
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="<?php echo h(hv_token_csrf()); ?>">
+                        <input type="hidden" name="mostrar" value="<?php echo $mostrar ? '0' : '1'; ?>">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="bi <?php echo $mostrar ? 'bi-eye-slash' : 'bi-eye'; ?> me-1"></i><?php echo $mostrar ? 'No aparecer en las posiciones' : 'Aparecer en las posiciones'; ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </section>
+        </div>
     </div>
 </main>
+<?php hv_pie(); ?>
 </body>
 </html>

@@ -1,4 +1,6 @@
 <?php
+// Panel de inicio después de iniciar sesión: resumen del jugador, accesos directos y,
+// para administradores, la gestión de cuentas (rol, correo, contraseña y datos del juego).
 require_once __DIR__ . '/seguridad.php';
 hv_iniciar_sesion();
 
@@ -7,85 +9,63 @@ if (!isset($_SESSION['UserId'])) {
     exit();
 }
 
-$userRole = $_SESSION['Role'] ?? 'Player';
-$progress = json_decode($_SESSION['Progress'], true);
-$statistics = json_decode($_SESSION['Statistics'], true);
-
-// 1. Conexión a la base de datos para obtener el Leaderboard
 require_once __DIR__ . '/config_bd.php';
+require_once __DIR__ . '/plantilla.php';
 
-$playersRanking = [];
+header('Cache-Control: no-store');
+
+$userId = $_SESSION['UserId'];
 $allUsers = [];
-$userRankData = null;
+$totalUsers = 0;
+$totalPages = 1;
+$currentPage = 1;
 
 try {
-    $conn = new PDO("mysql:host=$host;dbname=$db_name", $user, $pass);
+    $conn = new PDO("mysql:host=$host;dbname=$db_name;charset=utf8mb4", $user, $pass);
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // 1. Consulta para la Tabla de Posiciones Global (Top 10 usuarios con rol 'Player')
-    $playersRankingQuery = "
-        SELECT 
-            u.Username, 
-            CAST(JSON_EXTRACT(p.Statistics, '$.totalPoints') AS UNSIGNED) AS CuredCount,
-            CAST(JSON_EXTRACT(p.Progress, '$.playerLevel') AS UNSIGNED) AS CurrentLevel
+    // El rol y el avance se leen de la base: los de la sesión son los del momento del login
+    $stmt = $conn->prepare("
+        SELECT u.Username, r.RoleName, p.Progress,
+               COALESCE(s.TotalPuntos, 0) AS TotalPuntos,
+               COALESCE(s.TotalEstrellas, 0) AS TotalEstrellas,
+               COALESCE(s.RetosCompletados, 0) AS RetosCompletados,
+               COALESCE(s.TotalInsignias, 0) AS TotalInsignias
         FROM Users u
-        JOIN Roles r ON u.RoleId = r.RoleId
-        LEFT JOIN PlayerData p ON u.UserId = p.UserId
-        WHERE r.RoleName = 'Player'
-        ORDER BY CuredCount DESC
-        LIMIT 10
-    ";
-    $stmtRanking = $conn->prepare($playersRankingQuery);
-    $stmtRanking->execute();
-    $playersRanking = $stmtRanking->fetchAll(PDO::FETCH_ASSOC);
-
-    // 2. Consulta para obtener el Ranking Individual del usuario logueado respecto a TODOS los jugadores
-    $stmtUserRank = $conn->prepare("
-        SELECT 
-            u.Username, 
-            COALESCE(CAST(JSON_EXTRACT(p.Statistics, '$.totalPoints') AS UNSIGNED), 0) AS CuredCount,
-            COALESCE(CAST(JSON_EXTRACT(p.Progress, '$.playerLevel') AS UNSIGNED), 1) AS CurrentLevel,
-            (
-                SELECT COUNT(*) + 1 
-                FROM Users u2
-                JOIN Roles r2 ON u2.RoleId = r2.RoleId
-                LEFT JOIN PlayerData p2 ON u2.UserId = p2.UserId
-                WHERE r2.RoleName = 'Player' 
-                  AND COALESCE(CAST(JSON_EXTRACT(p2.Statistics, '$.totalPoints') AS UNSIGNED), 0) > COALESCE(CAST(JSON_EXTRACT(p.Statistics, '$.totalPoints') AS UNSIGNED), 0)
-            ) AS RankPosition
-        FROM Users u
-        LEFT JOIN PlayerData p ON u.UserId = p.UserId
-        WHERE u.UserId = :userId
+        JOIN Roles r ON r.RoleId = u.RoleId
+        LEFT JOIN PlayerData p ON p.UserId = u.UserId
+        LEFT JOIN EstResumenJugador s ON s.UserId = u.UserId
+        WHERE u.UserId = ?
     ");
-    $stmtUserRank->execute([':userId' => $_SESSION['UserId']]);
-    $userRankData = $stmtUserRank->fetch(PDO::FETCH_ASSOC);
+    $stmt->execute([$userId]);
+    $cuenta = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // 3. Consulta exclusiva para Administrador (Paginada a 10 registros por página)
+    if (!$cuenta) {
+        header('Location: logout.php');
+        exit();
+    }
+
+    $userRole = $cuenta['RoleName'];
+    $progress = json_decode((string)$cuenta['Progress'], true);
+    if (!is_array($progress)) {
+        $progress = [];
+    }
+
+    // Gestión de cuentas, paginada a 10 registros, solo para administradores
     if ($userRole === 'Administrator') {
         $recordsPerPage = 10;
-        
-        $currentPage = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
-        if ($currentPage < 1) {
-            $currentPage = 1;
-        }
-        
-        $totalStmt = $conn->query("SELECT COUNT(*) FROM Users");
-        $totalUsers = $totalStmt->fetchColumn();
-        
-        $totalPages = ceil($totalUsers / $recordsPerPage);
-        if ($totalPages < 1) $totalPages = 1;
-        
-        if ($currentPage > $totalPages) {
-            $currentPage = $totalPages;
-        }
-        
+        $currentPage = isset($_GET['page']) && is_numeric($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+
+        $totalUsers = (int)$conn->query("SELECT COUNT(*) FROM Users")->fetchColumn();
+        $totalPages = max(1, (int)ceil($totalUsers / $recordsPerPage));
+        $currentPage = min($currentPage, $totalPages);
         $offset = ($currentPage - 1) * $recordsPerPage;
-        
+
         $stmtUsers = $conn->prepare("
-            SELECT 
+            SELECT
                 u.UserId, u.Username, u.Email, u.RoleId, r.RoleName, u.CreatedAt, u.LastLogin,
                 p.Preferences, p.Statistics, p.Progress
-            FROM Users u 
+            FROM Users u
             JOIN Roles r ON u.RoleId = r.RoleId
             LEFT JOIN PlayerData p ON u.UserId = p.UserId
             ORDER BY u.CreatedAt DESC
@@ -96,374 +76,208 @@ try {
         $stmtUsers->execute();
         $allUsers = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
     }
-} catch (PDOException $e) {}
+} catch (Throwable $e) {
+    error_log('[dashboard] ' . $e->getMessage());
+    http_response_code(500);
+    exit('No se pudo cargar el panel. Inténtalo más tarde.');
+}
+
+$nombreJugador = trim((string)($progress['playerName'] ?? ''));
+$accesos = [
+    ['mi_avance.php', 'Mi avance', 'Tus retos, estrellas, insignias y tu lugar en la tabla.', 'bi-graph-up-arrow', ''],
+    ['index.php', 'Posiciones', 'Las tablas generales, por sistema y del mes.', 'bi-trophy', 'hv-icono-oro'],
+    ['mis_grupos.php', 'Grupos', $userRole === 'Player' ? 'Únete al grupo de tu clase con un código.' : 'Crea grupos y sigue el avance de tus alumnos.', 'bi-people', 'hv-icono-turquesa'],
+];
+if ($userRole === 'Administrator') {
+    $accesos[] = ['administracion.php', 'Administración', 'Estadísticas totales, jugadores, descartes y bitácora.', 'bi-shield-lock', 'hv-icono-coral'];
+}
+
+hv_encabezado('Mi panel', 'panel');
+hv_cabecera('¡Hola, ' . $cuenta['Username'] . '!', 'Este es tu panel de Hospital Virtual FacMed · Desafío Clínico.', 'bi-grid');
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="csrf-token" content="<?php echo hv_token_csrf(); ?>">
-    <title>Hospital Virtual - Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-</head>
-<body class="bg-light">
-
-<nav class="navbar navbar-dark bg-primary">
-    <div class="container">
-        <a class="navbar-brand" href="#">🏥 Hospital Virtual</a>
-        <span class="navbar-text text-white">
-            Dr. <?php echo htmlspecialchars($_SESSION['Username']); ?> 
-            <span class="badge bg-light text-dark ms-1"><?php echo htmlspecialchars($userRole); ?></span> | 
-            <a href="mi_avance.php" class="text-white text-decoration-none ms-2">Mi avance</a> |
-            <a href="mis_grupos.php" class="text-white text-decoration-none ms-2">Grupos</a> |
-            <?php if ($userRole === 'Administrator'): ?>
-                <a href="administracion.php" class="text-white text-decoration-none ms-2">Administración</a> |
-            <?php endif; ?>
-            <a href="logout.php" class="text-white text-decoration-none ms-2">Cerrar Sesión</a>
-        </span>
-    </div>
-</nav>
-
-<div class="container mt-4 mb-5">
-    <h2>Panel del Jugador</h2>
-    <hr>
-    
-    <!-- NUEVA TABLA: RANKING ACTUAL DEL JUGADOR LOGUEADO RESPECTO A TODOS -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card shadow-sm border-warning">
-                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center fw-bold">
-                    <span>🎯 Tu Posición Actual en el Ranking</span>
-                    <span class="badge bg-dark text-warning">Mi Ranking Global</span>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0 text-center align-middle">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th scope="col" style="width: 100px;">Posición</th>
-                                    <th scope="col">Jugador</th>
-                                    <th scope="col">Nivel</th>
-                                    <th scope="col">Puntos</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if ($userRankData): ?>
-                                    <tr class="table-success fw-bold">
-                                        <td>
-                                            <?php 
-                                                $myRank = $userRankData['RankPosition'];
-                                                if ($myRank == 1) echo '<span class="badge bg-warning text-dark fs-6">🥇 1°</span>';
-                                                elseif ($myRank == 2) echo '<span class="badge bg-secondary fs-6">🥈 2°</span>';
-                                                elseif ($myRank == 3) echo '<span class="badge bg-danger fs-6">🥉 3°</span>';
-                                                else echo '<span class="fw-bold">#' . $myRank . '</span>';
-                                            ?>
-                                        </td>
-                                        <td>
-                                            <?php echo htmlspecialchars($userRankData['Username']); ?>
-                                            <span class="badge bg-success ms-1">Tú</span>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-info text-dark">Nivel <?php echo $userRankData['CurrentLevel']; ?></span>
-                                        </td>
-                                        <td>
-                                            <?php echo number_format($userRankData['CuredCount']); ?>
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-muted py-3">No hay información de posición disponible para tu usuario.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+<main class="container position-relative">
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <section class="hv-tarjeta p-4 h-100 hv-aparecer">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="hv-avatar" style="width:3.5rem;height:3.5rem;font-size:1.2rem"><?php echo h(hv_iniciales($cuenta['Username'])); ?></span>
+                    <div>
+                        <div class="hv-titulo fs-5"><?php echo h($cuenta['Username']); ?></div>
+                        <span class="hv-chip"><?php echo h($userRole); ?></span>
                     </div>
                 </div>
-            </div>
+                <ul class="list-unstyled small mb-0 d-flex flex-column gap-2">
+                    <li><i class="bi bi-person me-2 text-primary"></i><strong>Personaje:</strong> <?php echo $nombreJugador !== '' ? h($nombreJugador) : '<span class="text-muted">sin nombre</span>'; ?></li>
+                    <li><i class="bi bi-gender-ambiguous me-2 text-primary"></i><strong>Género:</strong> <?php echo h($progress['gender'] ?? '—'); ?></li>
+                    <li><i class="bi bi-bar-chart-steps me-2 text-primary"></i><strong>Nivel en el juego:</strong> <?php echo (int)($progress['playerLevel'] ?? 0); ?></li>
+                </ul>
+            </section>
         </div>
-    </div>
-    
-    <!-- TABLA DE POSICIONES GLOBAL (TOP 10 JUGADORES) -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card shadow-sm border-warning">
-                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center fw-bold">
-                    <span>🏆 Tabla de Posiciones - Jugadores (<?php echo count($playersRanking); ?>)</span>
-                    <span class="badge bg-dark text-warning">Ranking General</span>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                        <table class="table table-striped table-hover mb-0 text-center align-middle">
-                            <thead class="table-dark sticky-top">
-                                <tr>
-                                    <th scope="col" style="width: 100px;">Posición</th>
-                                    <th scope="col">Jugador</th>
-                                    <th scope="col">Nivel</th>
-                                    <th scope="col">Puntos</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (count($playersRanking) > 0): ?>
-                                    <?php foreach ($playersRanking as $index => $player): ?>
-                                        <tr class="<?php echo ($player['Username'] === $_SESSION['Username']) ? 'table-success fw-bold' : ''; ?>">
-                                            <td>
-                                                <?php 
-                                                    $rank = $index + 1;
-                                                    if ($rank == 1) echo '<span class="badge bg-warning text-dark fs-6">🥇 1°</span>';
-                                                    elseif ($rank == 2) echo '<span class="badge bg-secondary fs-6">🥈 2°</span>';
-                                                    elseif ($rank == 3) echo '<span class="badge bg-danger fs-6">🥉 3°</span>';
-                                                    else echo '<span class="fw-bold">#' . $rank . '</span>';
-                                                ?>
-                                            </td>
-                                            <td>
-                                                <?php echo htmlspecialchars($player['Username']); ?>
-                                                <?php if ($player['Username'] === $_SESSION['Username']): ?>
-                                                    <span class="badge bg-success ms-1">Tú</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-info text-dark">Nivel <?php echo $player['CurrentLevel'] ?? 1; ?></span>
-                                            </td>
-                                            <td>
-                                                <?php echo number_format($player['CuredCount'] ?? 0); ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-muted py-3">No hay jugadores registrados en la tabla de posiciones aún.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+        <div class="col-lg-8">
+            <div class="row row-cols-2 g-3 h-100">
+                <?php
+                $resumen = [
+                    ['Puntos', $cuenta['TotalPuntos'], 'bi-lightning-charge', ''],
+                    ['Estrellas', $cuenta['TotalEstrellas'], 'bi-star', 'hv-icono-oro'],
+                    ['Retos completados', $cuenta['RetosCompletados'], 'bi-flag', 'hv-icono-turquesa'],
+                    ['Insignias', $cuenta['TotalInsignias'], 'bi-award', 'hv-icono-coral'],
+                ];
+                ?>
+                <?php foreach ($resumen as $d): ?>
+                    <div class="col">
+                        <div class="hv-tarjeta hv-dato h-100 hv-aparecer hv-aparecer-2">
+                            <span class="hv-icono <?php echo h($d[3]); ?>"><i class="bi <?php echo h($d[2]); ?>"></i></span>
+                            <div>
+                                <div class="hv-numero"><?php echo number_format((int)$d[1]); ?></div>
+                                <div class="hv-rotulo"><?php echo h($d[0]); ?></div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- TARJETAS DE ESTADÍSTICAS DEL JUGADOR LOGUEADO -->
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">📈 Jugador</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>Nombre del jugador:</strong> <?php echo htmlspecialchars((string)($progress['playerName'] ?? ""), ENT_QUOTES); ?></li>
-                        <li class="list-group-item"><strong>Género:</strong> <?php echo htmlspecialchars((string)($progress['gender'] ?? ""), ENT_QUOTES); ?></li>
-                        <li class="list-group-item"><strong>Nivel:</strong> <?php echo (int)($progress['playerLevel'] ?? 0); ?></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">📊 Estadísticas</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>&#10024; Puntos totales:</strong> <?php echo $statistics['totalPoints'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #bf8970;">★</span> Estrellas de bronze:</strong> <?php echo $statistics['bronzeStars'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #E3E4E5;">★</span> Estrellas de plata:</strong> <?php echo $statistics['silverStars'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #efbf04;">★</span> Estrellas de oro:</strong> <?php echo $statistics['goldStars'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #e5e4e2;">★</span> Estrellas de platino:</strong> <?php echo $statistics['platinumStars'] ?? 0; ?></li>
-                        <li class="list-group-item"><strong><span style="color: #a4f4f9;">★</span> Estrellas de diamante:</strong> <?php echo $statistics['diamondStars'] ?? 0; ?></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">📈 Insignias</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>Insignia 1</strong> </li>
-                        <li class="list-group-item"><strong>Insignia 2</strong> </li>
-                        <li class="list-group-item"><strong>Insignia 3</strong> </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">📊 Items</div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">1</li>
-                        <li class="list-group-item">2</li>
-                        <li class="list-group-item">3</li>
-                        <li class="list-group-item">4</li>
-                        <li class="list-group-item">5</li>
-                        <li class="list-group-item">6</li>
-                    </ul>
-                </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
 
-    <!-- SECCIÓN SÓLO PARA ADMINISTRADORES: GESTIÓN DE USUARIOS CON PAGINACIÓN -->
+    <h2 class="h5 mb-3">¿A dónde vamos?</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-<?php echo count($accesos); ?> g-3">
+        <?php foreach ($accesos as $a): ?>
+            <div class="col">
+                <a href="<?php echo h($a[0]); ?>" class="hv-tarjeta hv-tarjeta-animada hv-paso d-block text-decoration-none text-reset">
+                    <span class="hv-icono <?php echo h($a[4]); ?>"><i class="bi <?php echo h($a[3]); ?>"></i></span>
+                    <h3 class="h5"><?php echo h($a[1]); ?> <i class="bi bi-arrow-right-short"></i></h3>
+                    <p class="text-muted small mb-0"><?php echo h($a[2]); ?></p>
+                </a>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
     <?php if ($userRole === 'Administrator'): ?>
-        <div class="row mt-5">
-            <div class="col-12">
-                <div class="card shadow-sm border-danger">
-                    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">⚙️ Panel de Administración - Gestión de Usuarios</h5>
-                        <span class="badge bg-light text-danger fw-bold"><?php echo $totalUsers; ?> Usuarios Totales</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover mb-0 align-middle">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Usuario / ID</th>
-                                        <th>Correo Electrónico</th>
-                                        <th>Rol</th>
-                                        <th>Último Acceso</th>
-                                        <th class="text-center">Descargar Datos (JSON)</th>
-                                        <th class="text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (count($allUsers) > 0): ?>
-                                        <?php foreach ($allUsers as $userItem): ?>
-                                            <tr>
-                                                <td>
-                                                    <strong><?php echo htmlspecialchars($userItem['Username']); ?></strong><br>
-                                                    <small class="text-muted" style="font-size: 0.75rem;"><?php echo $userItem['UserId']; ?></small>
-                                                </td>
-                                                <td><?php echo htmlspecialchars($userItem['Email']); ?></td>
-                                                <td>
-                                                    <span class="badge <?php 
-                                                        echo $userItem['RoleName'] === 'Administrator' ? 'bg-danger' : 
-                                                            ($userItem['RoleName'] === 'Revisor' ? 'bg-warning text-dark' : 'bg-primary'); 
-                                                    ?>">
-                                                        <?php echo $userItem['RoleName']; ?>
-                                                    </span>
-                                                </td>
-                                                <td><?php echo $userItem['LastLogin'] ? date('d/m/Y H:i', strtotime($userItem['LastLogin'])) : 'Sin registro'; ?></td>
-                                                
-                                                <td class="text-center">
-                                                    <div class="btn-group btn-group-sm" role="group">
-                                                        <button class="btn btn-outline-info" title="Descargar Preferencias"
-                                                                data-json="<?php echo htmlspecialchars($userItem['Preferences'] ?? '{}', ENT_QUOTES); ?>"
-                                                                data-nombre="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
-                                                                onclick="downloadUserData(this.dataset.nombre + '_preferences.json', this)">
-                                                            <i class="bi bi-gear-fill"></i> Prefs
-                                                        </button>
-                                                        <button class="btn btn-outline-success" title="Descargar Estadísticas"
-                                                                data-json="<?php echo htmlspecialchars($userItem['Statistics'] ?? '{}', ENT_QUOTES); ?>"
-                                                                data-nombre="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
-                                                                onclick="downloadUserData(this.dataset.nombre + '_statistics.json', this)">
-                                                            <i class="bi bi-bar-chart-fill"></i> Stats
-                                                        </button>
-                                                        <button class="btn btn-outline-warning text-dark" title="Descargar Progreso"
-                                                                data-json="<?php echo htmlspecialchars($userItem['Progress'] ?? '{}', ENT_QUOTES); ?>"
-                                                                data-nombre="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
-                                                                onclick="downloadUserData(this.dataset.nombre + '_progress.json', this)">
-                                                            <i class="bi bi-controller"></i> Progreso
-                                                        </button>
-                                                    </div>
-                                                </td>
-
-                                                <td class="text-center">
-                                                    <div class="btn-group btn-group-sm" role="group">
-                                                        <button class="btn btn-outline-primary" title="Editar Usuario"
-                                                                data-user-id="<?php echo htmlspecialchars($userItem['UserId'], ENT_QUOTES); ?>"
-                                                                data-username="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
-                                                                data-email="<?php echo htmlspecialchars($userItem['Email'], ENT_QUOTES); ?>"
-                                                                data-role-id="<?php echo (int)$userItem['RoleId']; ?>"
-                                                                onclick="openEditModal(this.dataset.userId, this.dataset.username, this.dataset.email, this.dataset.roleId)">
-                                                            <i class="bi bi-pencil-square"></i> Editar
-                                                        </button>
-                                                        <button class="btn btn-outline-danger" title="Eliminar Usuario"
-                                                                data-user-id="<?php echo htmlspecialchars($userItem['UserId'], ENT_QUOTES); ?>"
-                                                                data-username="<?php echo htmlspecialchars($userItem['Username'], ENT_QUOTES); ?>"
-                                                                onclick="deleteUser(this.dataset.userId, this.dataset.username)">
-                                                            <i class="bi bi-trash-fill"></i> Eliminar
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <tr>
-                                            <td colspan="6" class="text-center py-3 text-muted">No se encontraron usuarios en esta página.</td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- BARRA DE PAGINACIÓN BOOTSTRAP -->
-                    <div class="card-footer bg-white py-3">
-                        <div class="row align-items-center">
-                            <div class="col-md-6 text-center text-md-start mb-2 mb-md-0 text-muted small">
-                                Mostrando página <strong class="text-dark"><?php echo $currentPage; ?></strong> de <strong class="text-dark"><?php echo $totalPages; ?></strong>
-                            </div>
-
-                            <div class="col-md-6">
-                                <nav aria-label="Navegación de usuarios">
-                                    <ul class="pagination pagination-sm justify-content-center justify-content-md-end mb-0">
-                                        
-                                        <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
-                                            <a class="page-link" href="?page=<?php echo $currentPage - 1; ?>">
-                                                <i class="bi bi-chevron-left"></i> Anterior
-                                            </a>
-                                        </li>
-
-                                        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                                            <li class="page-item <?php echo ($i == $currentPage) ? 'active' : ''; ?>">
-                                                <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
-                                            </li>
-                                        <?php endfor; ?>
-
-                                        <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
-                                            <a class="page-link" href="?page=<?php echo $currentPage + 1; ?>">
-                                                Siguiente <i class="bi bi-chevron-right"></i>
-                                            </a>
-                                        </li>
-
-                                    </ul>
-                                </nav>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
+        <section class="hv-tarjeta mt-5">
+            <div class="hv-tarjeta-encabezado d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span><i class="bi bi-person-gear me-2 text-primary"></i>Gestión de usuarios</span>
+                <span class="hv-chip"><?php echo number_format($totalUsers); ?> usuarios en total</span>
             </div>
-        </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle hv-tabla">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Correo electrónico</th>
+                            <th>Rol</th>
+                            <th>Último acceso</th>
+                            <th class="text-center">Descargar datos (JSON)</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!$allUsers): ?>
+                            <tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron usuarios en esta página.</td></tr>
+                        <?php endif; ?>
+                        <?php foreach ($allUsers as $userItem): ?>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="hv-avatar"><?php echo h(hv_iniciales($userItem['Username'])); ?></span>
+                                        <div>
+                                            <div class="fw-semibold"><?php echo h($userItem['Username']); ?></div>
+                                            <div class="text-muted" style="font-size: .72rem"><?php echo h($userItem['UserId']); ?></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><?php echo h($userItem['Email']); ?></td>
+                                <td>
+                                    <span class="hv-chip<?php echo $userItem['RoleName'] === 'Revisor' ? ' hv-chip-turquesa' : ''; ?>"<?php echo $userItem['RoleName'] === 'Administrator' ? ' style="background:#ffece8;color:#c2412d"' : ''; ?>><?php echo h($userItem['RoleName']); ?></span>
+                                </td>
+                                <td class="text-muted small"><?php echo $userItem['LastLogin'] ? h(date('d/m/Y H:i', strtotime($userItem['LastLogin']))) : 'Sin registro'; ?></td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-secondary" title="Descargar preferencias"
+                                                data-json="<?php echo h($userItem['Preferences'] ?? '{}'); ?>"
+                                                data-nombre="<?php echo h($userItem['Username']); ?>"
+                                                onclick="downloadUserData(this.dataset.nombre + '_preferences.json', this)">
+                                            <i class="bi bi-gear-fill"></i> Prefs
+                                        </button>
+                                        <button class="btn btn-outline-secondary" title="Descargar estadísticas"
+                                                data-json="<?php echo h($userItem['Statistics'] ?? '{}'); ?>"
+                                                data-nombre="<?php echo h($userItem['Username']); ?>"
+                                                onclick="downloadUserData(this.dataset.nombre + '_statistics.json', this)">
+                                            <i class="bi bi-bar-chart-fill"></i> Stats
+                                        </button>
+                                        <button class="btn btn-outline-secondary" title="Descargar progreso"
+                                                data-json="<?php echo h($userItem['Progress'] ?? '{}'); ?>"
+                                                data-nombre="<?php echo h($userItem['Username']); ?>"
+                                                onclick="downloadUserData(this.dataset.nombre + '_progress.json', this)">
+                                            <i class="bi bi-controller"></i> Progreso
+                                        </button>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-primary" title="Editar usuario"
+                                                data-user-id="<?php echo h($userItem['UserId']); ?>"
+                                                data-username="<?php echo h($userItem['Username']); ?>"
+                                                data-email="<?php echo h($userItem['Email']); ?>"
+                                                data-role-id="<?php echo (int)$userItem['RoleId']; ?>"
+                                                onclick="openEditModal(this.dataset.userId, this.dataset.username, this.dataset.email, this.dataset.roleId)">
+                                            <i class="bi bi-pencil-square"></i> Editar
+                                        </button>
+                                        <button class="btn btn-outline-danger" title="Eliminar usuario"
+                                                data-user-id="<?php echo h($userItem['UserId']); ?>"
+                                                data-username="<?php echo h($userItem['Username']); ?>"
+                                                onclick="deleteUser(this.dataset.userId, this.dataset.username)">
+                                            <i class="bi bi-trash-fill"></i> Eliminar
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
 
-        <!-- MODAL DE EDICIÓN DE USUARIO -->
-        <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 border-top">
+                <div class="text-muted small">Página <strong><?php echo $currentPage; ?></strong> de <strong><?php echo $totalPages; ?></strong></div>
+                <nav aria-label="Páginas de usuarios">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo $currentPage - 1; ?>"><i class="bi bi-chevron-left"></i> Anterior</a>
+                        </li>
+                        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                            <li class="page-item <?php echo $i === $currentPage ? 'active' : ''; ?>">
+                                <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                            </li>
+                        <?php endfor; ?>
+                        <li class="page-item <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo $currentPage + 1; ?>">Siguiente <i class="bi bi-chevron-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </section>
+
+        <!-- Ventana para editar una cuenta -->
+        <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="tituloEditar" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0" style="border-radius: var(--hv-radio)">
                     <form id="editUserForm" onsubmit="saveUserChanges(event)">
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title">✏️ Editar Usuario</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        <div class="modal-header text-white" style="background: linear-gradient(135deg, var(--hv-morado-oscuro), var(--hv-morado)); border-radius: var(--hv-radio) var(--hv-radio) 0 0">
+                            <h5 class="modal-title" id="tituloEditar"><i class="bi bi-pencil-square me-2"></i>Editar usuario</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                         </div>
                         <div class="modal-body">
                             <div id="modalAlert" class="alert d-none"></div>
-
                             <input type="hidden" id="editUserId" name="user_id">
 
                             <div class="mb-3">
-                                <label class="form-label">Nombre de Usuario</label>
+                                <label class="form-label fw-bold small" for="editUsername">Nombre de usuario</label>
                                 <input type="text" class="form-control" id="editUsername" name="username" required>
                             </div>
-
                             <div class="mb-3">
-                                <label class="form-label">Correo Electrónico</label>
+                                <label class="form-label fw-bold small" for="editEmail">Correo electrónico</label>
                                 <input type="email" class="form-control" id="editEmail" name="email" required>
                             </div>
-
                             <div class="mb-3">
-                                <label class="form-label">Rol de Usuario</label>
+                                <label class="form-label fw-bold small" for="editRoleId">Rol</label>
                                 <select class="form-select" id="editRoleId" name="role_id" required>
                                     <option value="1">Player</option>
                                     <option value="2">Revisor</option>
@@ -472,31 +286,29 @@ try {
                             </div>
 
                             <hr>
-                            <h6 class="text-muted"><i class="bi bi-key-fill"></i> Reseteo de Contraseña</h6>
-                            <div class="mb-3">
-                                <label class="form-label">Nueva Contraseña</label>
+                            <h6 class="text-muted"><i class="bi bi-key-fill me-1"></i>Restablecer la contraseña</h6>
+                            <div class="mb-1">
+                                <label class="form-label fw-bold small" for="editNewPassword">Nueva contraseña</label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" id="editNewPassword" name="new_password" placeholder="Dejar en blanco para no cambiar">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('editNewPassword', 'iconNewPass')">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('editNewPassword', 'iconNewPass')" aria-label="Mostrar u ocultar la contraseña">
                                         <i id="iconNewPass" class="bi bi-eye"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-danger">Guardar Cambios</button>
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar cambios</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     <?php endif; ?>
+</main>
 
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+<?php hv_pie(); ?>
 <script>
 let editModalInstance = null;
 
@@ -506,7 +318,7 @@ function openEditModal(userId, username, email, roleId) {
     document.getElementById('editEmail').value = email;
     document.getElementById('editRoleId').value = roleId;
     document.getElementById('editNewPassword').value = '';
-    
+
     document.getElementById('modalAlert').classList.add('d-none');
 
     if (!editModalInstance) {
@@ -603,6 +415,5 @@ function downloadUserData(filename, buttonElement) {
     URL.revokeObjectURL(url);
 }
 </script>
-
 </body>
 </html>

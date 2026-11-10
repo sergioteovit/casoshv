@@ -307,256 +307,180 @@ $camposRespuesta = [
     'Metacognicion'          => 'Metacognición',
     'Retroalimentacion'      => 'Retroalimentación',
 ];
+require_once __DIR__ . '/plantilla.php';
+hv_encabezado('Grupos', 'grupos');
+
+if ($alumnoActual) {
+    hv_cabecera($alumnoActual['Username'], 'Alumno del grupo ' . $grupoActual['Nombre'], 'bi-person-badge');
+} elseif ($grupoActual) {
+    hv_cabecera($grupoActual['Nombre'], (string)$grupoActual['Descripcion'], 'bi-people');
+} else {
+    hv_cabecera('Grupos', $puedeRevisar
+        ? 'Crea grupos para tu clase y sigue el avance de tus alumnos.'
+        : 'Únete al grupo de tu clase con el código que te dé tu docente.', 'bi-people');
+}
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospital Virtual - Grupos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-
-<nav class="navbar navbar-dark bg-primary">
-    <div class="container">
-        <span class="navbar-brand">🏥 Hospital Virtual</span>
-        <span class="navbar-text text-white">
-            <a href="posiciones.php" class="text-white text-decoration-none">Posiciones</a> |
-            <a href="mi_avance.php" class="text-white text-decoration-none">Mi avance</a> |
-            <a href="dashboard.php" class="text-white text-decoration-none">Panel</a> |
-            <a href="logout.php" class="text-white text-decoration-none">Cerrar sesión</a>
-        </span>
-    </div>
-</nav>
-
-<main class="container mt-4 mb-5">
+<main class="container position-relative">
     <?php if ($aviso): ?>
-        <div class="alert alert-<?php echo $aviso[0] === 'success' ? 'success' : 'danger'; ?>" role="status"><?php echo h($aviso[1]); ?></div>
+        <div class="alert alert-<?php echo $aviso[0] === 'success' ? 'success' : 'danger'; ?> shadow-sm" role="status">
+            <i class="bi <?php echo $aviso[0] === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle'; ?> me-1"></i><?php echo h($aviso[1]); ?>
+        </div>
     <?php endif; ?>
 
     <?php if ($alumnoActual): ?>
-        <p><a href="mis_grupos.php?grupo=<?php echo (int)$grupoActual['GrupoId']; ?>">← Volver a <?php echo h($grupoActual['Nombre']); ?></a></p>
-        <h1 class="h3"><?php echo h($alumnoActual['Username']); ?></h1>
-        <p class="text-muted">
-            <?php echo number_format((int)$alumnoActual['TotalPuntos']); ?> puntos ·
-            <?php echo number_format((int)$alumnoActual['TotalEstrellas']); ?> estrellas ·
-            <?php echo number_format((int)$alumnoActual['RetosCompletados']); ?> retos completados ·
-            <?php echo number_format((int)$alumnoActual['TotalInsignias']); ?> insignias
-        </p>
+        <a href="mis_grupos.php?grupo=<?php echo (int)$grupoActual['GrupoId']; ?>" class="btn btn-light btn-sm mb-3 shadow-sm"><i class="bi bi-arrow-left me-1"></i>Volver a <?php echo h($grupoActual['Nombre']); ?></a>
 
-        <div class="card shadow-sm mb-4">
-            <div class="card-header fw-bold">Retos</div>
-            <div class="table-responsive">
-                <table class="table table-striped align-middle mb-0">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Reto</th>
-                            <th>Sistema</th>
-                            <th class="text-end">Mejor puntaje</th>
-                            <th>Nivel</th>
-                            <th class="text-end">Intentos</th>
-                            <th class="text-end">Victorias</th>
-                            <th>Última actividad</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!$retosAlumno): ?>
-                            <tr><td colspan="7" class="text-center text-muted py-4">Sin retos registrados.</td></tr>
-                        <?php endif; ?>
-                        <?php foreach ($retosAlumno as $reto): ?>
+        <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
+            <?php
+            $datosAlumno = [
+                ['Puntos', $alumnoActual['TotalPuntos'], 'bi-lightning-charge', ''],
+                ['Estrellas', $alumnoActual['TotalEstrellas'], 'bi-star', 'hv-icono-oro'],
+                ['Retos completados', $alumnoActual['RetosCompletados'], 'bi-flag', 'hv-icono-turquesa'],
+                ['Insignias', $alumnoActual['TotalInsignias'], 'bi-award', 'hv-icono-coral'],
+            ];
+            ?>
+            <?php foreach ($datosAlumno as $d): ?>
+                <div class="col">
+                    <div class="hv-tarjeta hv-dato h-100">
+                        <span class="hv-icono <?php echo h($d[3]); ?>"><i class="bi <?php echo h($d[2]); ?>"></i></span>
+                        <div>
+                            <div class="hv-numero"><?php echo number_format((int)$d[1]); ?></div>
+                            <div class="hv-rotulo"><?php echo h($d[0]); ?></div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <section class="hv-tarjeta mb-4">
+            <div class="hv-tarjeta-encabezado"><i class="bi bi-flag me-2 text-primary"></i>Retos</div>
+            <?php if (!$retosAlumno): ?>
+                <div class="hv-vacio"><i class="bi bi-controller"></i><div class="fw-bold">Sin retos registrados.</div></div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle hv-tabla">
+                        <thead>
                             <tr>
-                                <td>
-                                    <?php echo h($reto['Titulo']); ?>
-                                    <span class="badge text-bg-secondary"><?php echo $reto['Tipo'] === 'caso' ? 'Caso' : 'Minijuego'; ?></span>
-                                </td>
-                                <td><?php echo h(est_nombre_sistema($reto['Sistema'])); ?></td>
-                                <td class="text-end"><?php echo number_format((int)$reto['MejorPuntaje']); ?></td>
-                                <td><?php echo h(est_nombre_nivel($reto['MejorEstrellas']) ?? 'Sin estrellas'); ?></td>
-                                <td class="text-end"><?php echo number_format((int)$reto['Intentos']); ?></td>
-                                <td class="text-end"><?php echo number_format((int)$reto['Victorias']); ?></td>
-                                <td><?php echo h(fecha_corta($reto['ActualizadoEn'])); ?></td>
+                                <th>Reto</th>
+                                <th>Sistema</th>
+                                <th class="col-numero">Mejor puntaje</th>
+                                <th>Nivel</th>
+                                <th class="col-numero">Intentos</th>
+                                <th class="col-numero">Victorias</th>
+                                <th>Última vez</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="card shadow-sm">
-            <div class="card-header fw-bold">Respuestas escritas en casos clínicos</div>
-            <ul class="list-group list-group-flush">
-                <?php if (!$respuestasAlumno): ?>
-                    <li class="list-group-item text-muted">Sin respuestas registradas.</li>
-                <?php endif; ?>
-                <?php foreach ($respuestasAlumno as $respuesta): ?>
-                    <li class="list-group-item">
-                        <details>
-                            <summary>
-                                <?php echo h($respuesta['Titulo'] ?? ('Expediente ' . $respuesta['NumeroExpediente'])); ?>
-                                <?php if ((int)$respuesta['Resuelto']): ?><span class="badge text-bg-success">Resuelto</span><?php endif; ?>
-                                <span class="text-muted small">· <?php echo h(fecha_corta($respuesta['ActualizadoEn'])); ?></span>
-                            </summary>
-                            <?php foreach ($camposRespuesta as $columna => $etiqueta): ?>
-                                <?php if (trim((string)$respuesta[$columna]) !== ''): ?>
-                                    <h3 class="h6 mt-3"><?php echo h($etiqueta); ?></h3>
-                                    <p class="mb-0"><?php echo nl2br(h($respuesta[$columna])); ?></p>
-                                <?php endif; ?>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($retosAlumno as $reto): ?>
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold"><?php echo h($reto['Titulo']); ?></div>
+                                        <span class="hv-chip<?php echo $reto['Tipo'] === 'caso' ? '' : ' hv-chip-turquesa'; ?>"><?php echo $reto['Tipo'] === 'caso' ? 'Caso clínico' : 'Minijuego'; ?></span>
+                                    </td>
+                                    <td><?php echo h(est_nombre_sistema($reto['Sistema'])); ?></td>
+                                    <td class="col-numero fw-bold"><?php echo number_format((int)$reto['MejorPuntaje']); ?></td>
+                                    <td><?php echo hv_nivel($reto['MejorEstrellas']); ?></td>
+                                    <td class="col-numero"><?php echo number_format((int)$reto['Intentos']); ?></td>
+                                    <td class="col-numero"><?php echo number_format((int)$reto['Victorias']); ?></td>
+                                    <td class="text-muted small"><?php echo h(fecha_corta($reto['ActualizadoEn'])); ?></td>
+                                </tr>
                             <?php endforeach; ?>
-                        </details>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </section>
+
+        <section class="hv-tarjeta">
+            <div class="hv-tarjeta-encabezado"><i class="bi bi-journal-medical me-2 text-primary"></i>Respuestas escritas en casos clínicos</div>
+            <?php if (!$respuestasAlumno): ?>
+                <div class="hv-vacio"><i class="bi bi-journal"></i><div class="fw-bold">Sin respuestas registradas.</div></div>
+            <?php else: ?>
+                <div class="accordion accordion-flush" id="respuestas">
+                    <?php foreach ($respuestasAlumno as $i => $respuesta): ?>
+                        <div class="accordion-item">
+                            <h3 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#respuesta<?php echo $i; ?>" aria-expanded="false" aria-controls="respuesta<?php echo $i; ?>">
+                                    <span class="me-2 fw-semibold"><?php echo h($respuesta['Titulo'] ?? ('Expediente ' . $respuesta['NumeroExpediente'])); ?></span>
+                                    <?php if ((int)$respuesta['Resuelto']): ?><span class="hv-chip hv-chip-turquesa me-2">Resuelto</span><?php endif; ?>
+                                    <span class="text-muted small"><?php echo h(fecha_corta($respuesta['ActualizadoEn'])); ?></span>
+                                </button>
+                            </h3>
+                            <div id="respuesta<?php echo $i; ?>" class="accordion-collapse collapse" data-bs-parent="#respuestas">
+                                <div class="accordion-body">
+                                    <?php foreach ($camposRespuesta as $columna => $etiqueta): ?>
+                                        <?php if (trim((string)$respuesta[$columna]) !== ''): ?>
+                                            <h4 class="h6 mt-3 text-primary"><?php echo h($etiqueta); ?></h4>
+                                            <p class="mb-0"><?php echo nl2br(h($respuesta[$columna])); ?></p>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
 
     <?php elseif ($grupoActual): ?>
-        <p><a href="mis_grupos.php">← Volver a los grupos</a></p>
-        <h1 class="h3"><?php echo h($grupoActual['Nombre']); ?></h1>
-        <p class="text-muted">
-            <?php echo h($grupoActual['Descripcion']); ?>
-            Código: <code><?php echo h($grupoActual['Codigo']); ?></code>
-            <?php if (!(int)$grupoActual['Activo']): ?><span class="badge text-bg-secondary">Inactivo</span><?php endif; ?>
-        </p>
+        <a href="mis_grupos.php" class="btn btn-light btn-sm mb-3 shadow-sm"><i class="bi bi-arrow-left me-1"></i>Volver a los grupos</a>
 
-        <div class="card shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-striped align-middle mb-0">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Alumno</th>
-                            <th class="text-end">Puntos</th>
-                            <th class="text-end">Estrellas</th>
-                            <th class="text-end">Retos</th>
-                            <th class="text-end">Insignias</th>
-                            <th>Última actividad</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!$alumnosGrupo): ?>
-                            <tr><td colspan="7" class="text-center text-muted py-4">Todavía no hay alumnos en este grupo.</td></tr>
-                        <?php endif; ?>
-                        <?php foreach ($alumnosGrupo as $alumno): ?>
-                            <tr>
-                                <td><a href="mis_grupos.php?grupo=<?php echo (int)$grupoActual['GrupoId']; ?>&amp;alumno=<?php echo h(urlencode($alumno['UserId'])); ?>"><?php echo h($alumno['Username']); ?></a></td>
-                                <td class="text-end"><?php echo number_format((int)$alumno['TotalPuntos']); ?></td>
-                                <td class="text-end"><?php echo number_format((int)$alumno['TotalEstrellas']); ?></td>
-                                <td class="text-end"><?php echo number_format((int)$alumno['RetosCompletados']); ?></td>
-                                <td class="text-end"><?php echo number_format((int)$alumno['TotalInsignias']); ?></td>
-                                <td><?php echo h(fecha_corta($alumno['ActualizadoEn'])); ?></td>
-                                <td class="text-end">
-                                    <form method="POST" onsubmit="return confirm('¿Quitar a este alumno del grupo? Sus resultados no se borran.');">
-                                        <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
-                                        <input type="hidden" name="accion" value="quitar_alumno">
-                                        <input type="hidden" name="grupo" value="<?php echo (int)$grupoActual['GrupoId']; ?>">
-                                        <input type="hidden" name="alumno" value="<?php echo h($alumno['UserId']); ?>">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">Quitar</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+        <div class="hv-tarjeta p-3 p-md-4 mb-4 d-flex flex-wrap align-items-center gap-3">
+            <span class="hv-icono hv-icono-oro"><i class="bi bi-key"></i></span>
+            <div class="me-auto">
+                <div class="text-muted small">Código para unirse</div>
+                <div class="hv-titulo fs-3" style="letter-spacing: .12em"><?php echo h($grupoActual['Codigo']); ?></div>
             </div>
+            <?php if (!(int)$grupoActual['Activo']): ?>
+                <span class="hv-chip">Inactivo: no acepta alumnos nuevos</span>
+            <?php endif; ?>
+            <span class="text-muted"><i class="bi bi-people me-1"></i><?php echo count($alumnosGrupo); ?> <?php echo count($alumnosGrupo) === 1 ? 'alumno' : 'alumnos'; ?></span>
         </div>
 
-    <?php else: ?>
-        <h1 class="h3 mb-3">Grupos</h1>
-
-        <?php if ($esJugador): ?>
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h2 class="h5">Unirme a un grupo</h2>
-                    <p class="text-muted small">Pertenecer a un grupo es opcional. El docente del grupo podrá ver tus resultados y tus respuestas escritas.</p>
-                    <form method="POST" class="row g-2">
-                        <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
-                        <input type="hidden" name="accion" value="unirse">
-                        <div class="col-sm-6 col-md-4">
-                            <label for="codigo" class="visually-hidden">Código del grupo</label>
-                            <input type="text" id="codigo" name="codigo" class="form-control" placeholder="Código del grupo" maxlength="20" autocomplete="off" required>
-                        </div>
-                        <div class="col-auto"><button type="submit" class="btn btn-primary">Unirme</button></div>
-                    </form>
+        <section class="hv-tarjeta">
+            <?php if (!$alumnosGrupo): ?>
+                <div class="hv-vacio">
+                    <i class="bi bi-person-plus"></i>
+                    <div class="fw-bold">Todavía no hay alumnos en este grupo.</div>
+                    <div class="small">Comparte el código para que tus alumnos se unan desde la página Grupos.</div>
                 </div>
-            </div>
-
-            <div class="card shadow-sm mb-4">
-                <div class="card-header fw-bold">Mis grupos</div>
-                <ul class="list-group list-group-flush">
-                    <?php if (!$misGrupos): ?>
-                        <li class="list-group-item text-muted">No perteneces a ningún grupo.</li>
-                    <?php endif; ?>
-                    <?php foreach ($misGrupos as $grupo): ?>
-                        <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
-                            <div>
-                                <strong><?php echo h($grupo['Nombre']); ?></strong>
-                                <?php if (!(int)$grupo['Activo']): ?><span class="badge text-bg-secondary">Inactivo</span><?php endif; ?>
-                                <div class="small text-muted"><?php echo h($grupo['Descripcion']); ?></div>
-                            </div>
-                            <form method="POST" onsubmit="return confirm('¿Salir de este grupo?');">
-                                <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
-                                <input type="hidden" name="accion" value="salir">
-                                <input type="hidden" name="grupo" value="<?php echo (int)$grupo['GrupoId']; ?>">
-                                <button type="submit" class="btn btn-outline-secondary btn-sm">Salir</button>
-                            </form>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
-
-        <?php if ($puedeRevisar): ?>
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h2 class="h5">Crear un grupo</h2>
-                    <form method="POST" class="row g-2">
-                        <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
-                        <input type="hidden" name="accion" value="crear">
-                        <div class="col-md-4">
-                            <label for="nombre" class="visually-hidden">Nombre del grupo</label>
-                            <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Nombre del grupo" maxlength="120" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="descripcion" class="visually-hidden">Descripción</label>
-                            <input type="text" id="descripcion" name="descripcion" class="form-control" placeholder="Descripción (opcional)" maxlength="255">
-                        </div>
-                        <div class="col-auto"><button type="submit" class="btn btn-success">Crear</button></div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-header fw-bold"><?php echo $esAdmin ? 'Todos los grupos' : 'Grupos a mi cargo'; ?></div>
+            <?php else: ?>
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle mb-0">
-                        <thead class="table-dark">
+                    <table class="table table-hover align-middle hv-tabla">
+                        <thead>
                             <tr>
-                                <th>Grupo</th>
-                                <th>Código</th>
-                                <th class="text-end">Alumnos</th>
-                                <th>Estado</th>
+                                <th class="col-posicion">Lugar</th>
+                                <th>Alumno</th>
+                                <th class="col-numero">Puntos</th>
+                                <th class="col-numero">Estrellas</th>
+                                <th class="col-numero">Retos</th>
+                                <th class="col-numero">Insignias</th>
+                                <th>Última actividad</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (!$gruposRevision): ?>
-                                <tr><td colspan="5" class="text-center text-muted py-4">Todavía no hay grupos.</td></tr>
-                            <?php endif; ?>
-                            <?php foreach ($gruposRevision as $grupo): ?>
+                            <?php foreach ($alumnosGrupo as $i => $alumno): ?>
                                 <tr>
+                                    <td class="col-posicion"><span class="hv-lugar"><?php echo $i + 1; ?></span></td>
                                     <td>
-                                        <a href="mis_grupos.php?grupo=<?php echo (int)$grupo['GrupoId']; ?>"><?php echo h($grupo['Nombre']); ?></a>
-                                        <div class="small text-muted"><?php echo h($grupo['Descripcion']); ?></div>
+                                        <a class="d-flex align-items-center gap-2 text-decoration-none" href="mis_grupos.php?grupo=<?php echo (int)$grupoActual['GrupoId']; ?>&amp;alumno=<?php echo h(urlencode($alumno['UserId'])); ?>">
+                                            <span class="hv-avatar"><?php echo h(hv_iniciales($alumno['Username'])); ?></span>
+                                            <span class="fw-semibold"><?php echo h($alumno['Username']); ?></span>
+                                        </a>
                                     </td>
-                                    <td><code><?php echo h($grupo['Codigo']); ?></code></td>
-                                    <td class="text-end"><?php echo number_format((int)$grupo['Alumnos']); ?></td>
-                                    <td><?php echo (int)$grupo['Activo'] ? 'Activo' : 'Inactivo'; ?></td>
+                                    <td class="col-numero fw-bold"><?php echo number_format((int)$alumno['TotalPuntos']); ?></td>
+                                    <td class="col-numero"><?php echo number_format((int)$alumno['TotalEstrellas']); ?></td>
+                                    <td class="col-numero"><?php echo number_format((int)$alumno['RetosCompletados']); ?></td>
+                                    <td class="col-numero"><?php echo number_format((int)$alumno['TotalInsignias']); ?></td>
+                                    <td class="text-muted small"><?php echo h(fecha_corta($alumno['ActualizadoEn'])); ?></td>
                                     <td class="text-end">
-                                        <form method="POST">
+                                        <form method="POST" onsubmit="return confirm('¿Quitar a este alumno del grupo? Sus resultados no se borran.');">
                                             <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
-                                            <input type="hidden" name="accion" value="cambiar_estado">
-                                            <input type="hidden" name="grupo" value="<?php echo (int)$grupo['GrupoId']; ?>">
-                                            <button type="submit" class="btn btn-outline-secondary btn-sm"><?php echo (int)$grupo['Activo'] ? 'Desactivar' : 'Activar'; ?></button>
+                                            <input type="hidden" name="accion" value="quitar_alumno">
+                                            <input type="hidden" name="grupo" value="<?php echo (int)$grupoActual['GrupoId']; ?>">
+                                            <input type="hidden" name="alumno" value="<?php echo h($alumno['UserId']); ?>">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-person-dash me-1"></i>Quitar</button>
                                         </form>
                                     </td>
                                 </tr>
@@ -564,9 +488,146 @@ $camposRespuesta = [
                         </tbody>
                     </table>
                 </div>
+            <?php endif; ?>
+        </section>
+
+    <?php else: ?>
+        <section class="hv-tarjeta hv-banner mb-4">
+            <div class="row g-0 align-items-center">
+                <div class="col-md-5">
+                    <img class="hv-banner-img" src="assets/img/ilustracion-grupos.jpg" alt="Estudiantes de medicina juntando las manos con su profesora">
+                </div>
+                <div class="col-md-7 p-4 p-lg-5">
+                    <span class="hv-chip hv-chip-turquesa mb-2">Aprender en equipo</span>
+                    <?php if ($puedeRevisar): ?>
+                        <h2 class="h4">Acompaña a tu clase</h2>
+                        <p class="text-muted mb-0">Crea un grupo, comparte su código con tus alumnos y consulta sus retos y sus respuestas escritas en los casos clínicos.</p>
+                    <?php else: ?>
+                        <h2 class="h4">Juega con tu clase</h2>
+                        <p class="text-muted mb-0">Únete al grupo de tu docente para que pueda seguir tu avance y darte retroalimentación. Es opcional y puedes salir cuando quieras.</p>
+                    <?php endif; ?>
+                </div>
             </div>
-        <?php endif; ?>
+        </section>
+
+        <div class="row g-4">
+            <?php if ($esJugador): ?>
+                <div class="col-lg-5">
+                    <section class="hv-tarjeta p-4 h-100">
+                        <span class="hv-icono hv-icono-turquesa mb-3"><i class="bi bi-door-open"></i></span>
+                        <h2 class="h5">Unirme a un grupo</h2>
+                        <p class="text-muted small">Pertenecer a un grupo es opcional. El docente del grupo podrá ver tus resultados y tus respuestas escritas.</p>
+                        <form method="POST" class="d-flex gap-2">
+                            <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
+                            <input type="hidden" name="accion" value="unirse">
+                            <label for="codigo" class="visually-hidden">Código del grupo</label>
+                            <input type="text" id="codigo" name="codigo" class="form-control text-uppercase" placeholder="Código del grupo" maxlength="20" autocomplete="off" required>
+                            <button type="submit" class="btn btn-turquesa">Unirme</button>
+                        </form>
+                    </section>
+                </div>
+
+                <div class="col-lg-7">
+                    <section class="hv-tarjeta h-100">
+                        <div class="hv-tarjeta-encabezado"><i class="bi bi-people me-2 text-primary"></i>Mis grupos</div>
+                        <?php if (!$misGrupos): ?>
+                            <div class="hv-vacio">
+                                <i class="bi bi-people"></i>
+                                <div class="fw-bold">No perteneces a ningún grupo.</div>
+                                <div class="small">Cuando tu docente te comparta un código, escríbelo a la izquierda.</div>
+                            </div>
+                        <?php else: ?>
+                            <ul class="hv-logros">
+                                <?php foreach ($misGrupos as $grupo): ?>
+                                    <li class="align-items-center">
+                                        <span class="hv-icono"><i class="bi bi-people-fill"></i></span>
+                                        <div class="me-auto">
+                                            <div class="fw-bold"><?php echo h($grupo['Nombre']); ?>
+                                                <?php if (!(int)$grupo['Activo']): ?><span class="hv-chip ms-1">Inactivo</span><?php endif; ?>
+                                            </div>
+                                            <div class="small text-muted"><?php echo h($grupo['Descripcion']); ?></div>
+                                        </div>
+                                        <form method="POST" onsubmit="return confirm('¿Salir de este grupo?');">
+                                            <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
+                                            <input type="hidden" name="accion" value="salir">
+                                            <input type="hidden" name="grupo" value="<?php echo (int)$grupo['GrupoId']; ?>">
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm">Salir</button>
+                                        </form>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </section>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($puedeRevisar): ?>
+                <div class="col-12">
+                    <section class="hv-tarjeta p-4">
+                        <h2 class="h5"><i class="bi bi-plus-circle me-2 text-primary"></i>Crear un grupo</h2>
+                        <form method="POST" class="row g-2">
+                            <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
+                            <input type="hidden" name="accion" value="crear">
+                            <div class="col-md-4">
+                                <label for="nombre" class="visually-hidden">Nombre del grupo</label>
+                                <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Nombre del grupo" maxlength="120" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="descripcion" class="visually-hidden">Descripción</label>
+                                <input type="text" id="descripcion" name="descripcion" class="form-control" placeholder="Descripción (opcional)" maxlength="255">
+                            </div>
+                            <div class="col-md-2 d-grid"><button type="submit" class="btn btn-primary">Crear</button></div>
+                        </form>
+                    </section>
+                </div>
+
+                <div class="col-12">
+                    <section class="hv-tarjeta">
+                        <div class="hv-tarjeta-encabezado"><i class="bi bi-collection me-2 text-primary"></i><?php echo $esAdmin ? 'Todos los grupos' : 'Grupos a mi cargo'; ?></div>
+                        <?php if (!$gruposRevision): ?>
+                            <div class="hv-vacio"><i class="bi bi-collection"></i><div class="fw-bold">Todavía no hay grupos.</div></div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle hv-tabla">
+                                    <thead>
+                                        <tr>
+                                            <th>Grupo</th>
+                                            <th>Código</th>
+                                            <th class="col-numero">Alumnos</th>
+                                            <th>Estado</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($gruposRevision as $grupo): ?>
+                                            <tr>
+                                                <td>
+                                                    <a class="fw-bold text-decoration-none" href="mis_grupos.php?grupo=<?php echo (int)$grupo['GrupoId']; ?>"><?php echo h($grupo['Nombre']); ?></a>
+                                                    <div class="small text-muted"><?php echo h($grupo['Descripcion']); ?></div>
+                                                </td>
+                                                <td><code class="fs-6"><?php echo h($grupo['Codigo']); ?></code></td>
+                                                <td class="col-numero"><?php echo number_format((int)$grupo['Alumnos']); ?></td>
+                                                <td><span class="hv-chip<?php echo (int)$grupo['Activo'] ? ' hv-chip-turquesa' : ''; ?>"><?php echo (int)$grupo['Activo'] ? 'Activo' : 'Inactivo'; ?></span></td>
+                                                <td class="text-end">
+                                                    <form method="POST">
+                                                        <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
+                                                        <input type="hidden" name="accion" value="cambiar_estado">
+                                                        <input type="hidden" name="grupo" value="<?php echo (int)$grupo['GrupoId']; ?>">
+                                                        <button type="submit" class="btn btn-outline-secondary btn-sm"><?php echo (int)$grupo['Activo'] ? 'Desactivar' : 'Activar'; ?></button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </section>
+                </div>
+            <?php endif; ?>
+        </div>
     <?php endif; ?>
 </main>
+<?php hv_pie(); ?>
 </body>
 </html>

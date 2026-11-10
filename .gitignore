@@ -1,3 +1,15 @@
 config.local.php
 # Los títulos de los casos revelan el diagnóstico: el repositorio es público
 game/sql/002_catalogos.sql
+# Imágenes: solo se registran las copias optimizadas que usa la web.
+# Los originales (grandes) se quedan en la computadora; al agregar una imagen nueva a la web, añadirla aquí.
+game/assets/img/*
+!game/assets/img/favicon.svg
+!game/assets/img/logo-hv-blanco.png
+!game/assets/img/medicos.png
+!game/assets/img/ilustracion-acceso.png
+!game/assets/img/ilustracion-avance.png
+!game/assets/img/ilustracion-grupos.jpg
+!game/assets/img/mascota-trofeo.png
+!game/assets/img/escudo-unam-blanco.png
+!game/assets/img/escudo-fm-blanco-web.png
