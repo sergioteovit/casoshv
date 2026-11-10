@@ -174,13 +174,21 @@ if (isset($_GET['datos'])) {
     }
     exit();
 }
+
+// Solo se abre la sesión si el visitante ya tiene una, para no crear sesiones vacías
+$conSesion = false;
+if (isset($_COOKIE[session_name()])) {
+    require_once __DIR__ . '/seguridad.php';
+    hv_iniciar_sesion();
+    $conSesion = isset($_SESSION['UserId']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospital Virtual - Tablas de posiciones</title>
+    <title>Hospital Virtual - Estadísticas del juego</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .col-numero { text-align: right; font-variant-numeric: tabular-nums; }
@@ -193,12 +201,30 @@ if (isset($_GET['datos'])) {
 <nav class="navbar navbar-dark bg-primary">
     <div class="container">
         <span class="navbar-brand">🏥 Hospital Virtual</span>
-        <a href="index.php" class="btn btn-outline-light btn-sm">Iniciar sesión</a>
+        <?php if ($conSesion): ?>
+            <a href="dashboard.php" class="btn btn-outline-light btn-sm">Mi panel</a>
+        <?php else: ?>
+            <a href="acceso.php" class="btn btn-outline-light btn-sm">Iniciar sesión</a>
+        <?php endif; ?>
     </div>
 </nav>
 
 <main class="container mt-4 mb-5">
-    <h1 class="h3">Tablas de posiciones</h1>
+    <section class="p-4 mb-4 bg-white rounded shadow-sm">
+        <h1 class="h3">Estadísticas de Hospital Virtual</h1>
+        <p class="mb-3">
+            Hospital Virtual Challenge es el juego de casos clínicos y retos de la Facultad de Medicina.
+            Aquí se publican las posiciones de los jugadores y sus logros más recientes.
+        </p>
+        <?php if ($conSesion): ?>
+            <a href="mi_avance.php" class="btn btn-primary">Ver mi avance</a>
+        <?php else: ?>
+            <a href="acceso.php" class="btn btn-primary">Iniciar sesión</a>
+            <span class="text-muted small ms-2">para ver tu avance y unirte a un grupo.</span>
+        <?php endif; ?>
+    </section>
+
+    <h2 class="h4">Tablas de posiciones</h2>
     <p class="text-muted">Cada reto cuenta una sola vez, con tu mejor resultado.</p>
 
     <div class="row g-4">

@@ -6,7 +6,7 @@ require_once __DIR__ . '/seguridad.php';
 hv_iniciar_sesion();
 
 if (!isset($_SESSION['UserId'])) {
-    header('Location: index.php');
+    header('Location: acceso.php');
     exit();
 }
 

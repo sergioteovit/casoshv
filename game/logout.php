@@ -20,6 +20,6 @@ if (ini_get("session.use_cookies")) {
 session_destroy();
 
 // 5. Redirigir al usuario de vuelta a la página de inicio/login.
-header("Location: index.php");
+header("Location: acceso.php");
 exit();
 ?>
