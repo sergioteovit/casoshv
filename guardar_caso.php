@@ -13,6 +13,7 @@ header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config_bd.php';
+require_once __DIR__ . '/subidas.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
@@ -53,40 +54,16 @@ try {
             exit;
         }
         
-        // 3. PROCESAR SUBIDA DE ARCHIVOS
-        $archivosSubidos = [];
-        $uploadDir = __DIR__ . '/uploads/'; // Carpeta donde se guardarán los PDFs/Imágenes
-
-        // Crear la carpeta si no existe
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
+        // 3. PROCESAR SUBIDA DE ARCHIVOS (solo imágenes, PDF y Word; si uno no es válido no se guarda nada)
+        $validacion = hv_subidas_validar('archivos');
+        if ($validacion['error'] !== null) {
+            echo json_encode(['status' => 'error', 'message' => $validacion['error']]);
+            exit;
         }
-
-        if(isset($_FILES['archivos'])) {
-            foreach($_FILES['archivos']['tmp_name'] as $key => $tmp_name) {
-                if ($_FILES['archivos']['error'][$key] === UPLOAD_ERR_OK) {
-                    $fileNameOriginal = basename($_FILES['archivos']['name'][$key]);
-
-                    // Limpiar el nombre del archivo para evitar problemas (espacios, caracteres extraños)
-                    $extension = pathinfo($fileNameOriginal, PATHINFO_EXTENSION);
-                    $fileNameLimpio = time() . '_' . uniqid() . '.' . $extension; 
-
-                    $targetFilePath = $uploadDir . $fileNameLimpio;
-
-                    // Mover el archivo de la memoria temporal a la carpeta final
-                    if(move_uploaded_file($tmp_name, $targetFilePath)) {
-                        // Guardamos solo la ruta relativa para la base de datos
-                        $archivosSubidos[] = 'uploads/' . $fileNameLimpio;
-                    } 
-                } 
-                else {
-                    // Agrega este bloque para que PHP te devuelva el error exacto
-                    echo json_encode([
-                        'status' => 'error', 
-                        'message' => 'Fallo al subir el archivo. Código de error PHP: ' . $_FILES['archivos']['error'][$key]
-                    ]);
-                }
-            }
+        $archivosSubidos = hv_subidas_guardar($validacion['archivos']);
+        if ($archivosSubidos === null) {
+            echo json_encode(['status' => 'error', 'message' => HV_SUBIDAS_ERROR_CARPETA]);
+            exit;
         }
         
         // 4. INSERTAR EN LA BASE DE DATOS

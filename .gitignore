@@ -13,3 +13,6 @@ game/assets/img/*
 !game/assets/img/mascota-trofeo.png
 !game/assets/img/escudo-unam-blanco.png
 !game/assets/img/escudo-fm-blanco-web.png
+# Archivos adjuntos de los casos (están en el servidor): solo se versiona la regla que bloquea el acceso web
+uploads/*
+!uploads/.htaccess

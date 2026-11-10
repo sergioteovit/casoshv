@@ -11,6 +11,7 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config_bd.php';
+require_once __DIR__ . '/subidas.php';
 
 // Asegurar que recibimos el ID del caso a actualizar
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_caso'])) {
@@ -54,30 +55,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_caso'])) {
             }
         }*/
 
-        // Procesar nuevos archivos adjuntos opcionales en la edición
-        $archivosSubidos = [];
-        $uploadDir = __DIR__ . '/uploads/';
+        // Procesar nuevos archivos adjuntos opcionales en la edición (solo imágenes, PDF y Word)
+        $validacion = hv_subidas_validar('archivos');
+        if ($validacion['error'] !== null) {
+            echo json_encode(['status' => 'error', 'message' => $validacion['error']]);
+            exit;
+        }
+        $archivosSubidos = hv_subidas_guardar($validacion['archivos']);
+        if ($archivosSubidos === null) {
+            echo json_encode(['status' => 'error', 'message' => HV_SUBIDAS_ERROR_CARPETA]);
+            exit;
+        }
 
-        if(isset($_FILES['archivos'])) {
-            foreach($_FILES['archivos']['tmp_name'] as $key => $tmp_name) {
-                if ($_FILES['archivos']['error'][$key] === UPLOAD_ERR_OK) {
-                    $extension = pathinfo($_FILES['archivos']['name'][$key], PATHINFO_EXTENSION);
-                    $fileNameLimpio = time() . '_edit_' . uniqid() . '.' . $extension; 
-                    if(move_uploaded_file($tmp_name, $uploadDir . $fileNameLimpio)) {
-                        $archivosSubidos[] = 'uploads/' . $fileNameLimpio;
-                    }
-                }
-            }
-        } 
-        
         try {
             if (!empty($archivosSubidos)) {
-                // Si subió archivos nuevos, los guardamos y actualizamos las rutas
+                // Los archivos nuevos se agregan a los que ya tenía el caso (antes se reemplazaban)
+                $stmtRutas = $pdo->prepare("SELECT rutas_archivos FROM casos_clinicos WHERE id = :id");
+                $stmtRutas->execute([':id' => $idCaso]);
+                $rutasAnteriores = json_decode((string)$stmtRutas->fetchColumn(), true);
+                if (!is_array($rutasAnteriores)) {
+                    $rutasAnteriores = [];
+                }
+
                 $sql = "UPDATE casos_clinicos SET datos_completos = :datos, rutas_archivos = :archivos WHERE id = :id";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([
                     ':datos' => $datosJson,
-                    ':archivos' => json_encode($archivosSubidos),
+                    ':archivos' => json_encode(array_values(array_merge($rutasAnteriores, $archivosSubidos))),
                     ':id' => $idCaso
                 ]);
             } else {
