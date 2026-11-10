@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // 1. SEGURIDAD: Validar que el usuario esté logueado
 if (!isset($_SESSION['usuario_id'])) {
@@ -85,8 +86,8 @@ try {
     exit;
 
 } catch (PDOException $e) {
-    die("Error de base de datos: " . $e->getMessage());
+    die("Error de base de datos: " . hv_error_interno($e));
 } catch (Exception $e) {
-    die("Error en el sistema: " . $e->getMessage());
+    die("Error en el sistema: " . hv_error_interno($e));
 }
 ?>

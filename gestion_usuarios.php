@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // 1. SEGURIDAD: Verificar que el usuario sea Administrador
 if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] !== 'Administrador') {
@@ -26,7 +27,7 @@ try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch(PDOException $e) {
-    die("Error de conexión a la Base de Datos: " . $e->getMessage());
+    die("Error de conexión a la Base de Datos: " . hv_error_interno($e));
 }
 
 // =================================================================
@@ -59,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
         
         echo json_encode(['status' => 'success', 'message' => 'Rol actualizado correctamente.']);
     } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => 'Error en la base de datos: ' . $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => 'Error en la base de datos: ' . hv_error_interno($e)]);
     }
     exit; // Detener la ejecución para que no renderice el HTML en la petición AJAX
 }
@@ -86,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
         if ($e->getCode() == 23000) {
             $mensajeError = "Error: El nombre de usuario o correo electrónico ya están registrados.";
         } else {
-            $mensajeError = "Error al crear usuario: " . $e->getMessage();
+            $mensajeError = "Error al crear usuario: " . hv_error_interno($e);
         }
     }
 }
@@ -137,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'resta
         header("Location: gestion_usuarios.php?msg=pass_reset");
         exit;
     } catch (PDOException $e) {
-        $error_sistema = "Error al restablecer la contraseña: " . $e->getMessage();
+        $error_sistema = "Error al restablecer la contraseña: " . hv_error_interno($e);
     }
 }
 
@@ -168,7 +169,7 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
       <div class="d-flex align-items-center text-white">
           <span class="me-3 small"><i class="bi bi-person-circle"></i> <?= htmlspecialchars($_SESSION['nombre_completo']) ?></span>
           <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
-          <a href="logout.php" class="btn btn-sm btn-danger">Salir</a>
+          <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
       </div>
     </div>
   </div>

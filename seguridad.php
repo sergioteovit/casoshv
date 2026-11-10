@@ -21,6 +21,16 @@ function hv_iniciar_sesion()
     session_start();
 }
 
+// Registra el detalle de un error en el log del servidor y devuelve un texto para mostrar al usuario
+// sin la estructura de la base de datos (con una referencia para encontrarlo en el log).
+function hv_error_interno($e)
+{
+    $referencia = bin2hex(random_bytes(3));
+    error_log('[casoshv] ref ' . $referencia . ' ' . get_class($e) . ': ' . $e->getMessage()
+        . ' en ' . basename($e->getFile()) . ':' . $e->getLine());
+    return 'error interno, avisa al administrador (referencia ' . $referencia . ')';
+}
+
 // Las cuentas nuevas (rol Invitado) no ven ningún contenido hasta que un administrador les asigna
 // otro rol: se envían a cuenta_pendiente.php, que vuelve a leer el rol de la base de datos.
 function hv_bloquear_invitado()

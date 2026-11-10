@@ -1,6 +1,7 @@
 <?php
 // 1. Iniciar sesión y conexión a la base de datos
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 // Reemplaza 'conexion.php' con el nombre de tu archivo de conexión PDO
 require_once 'initconn.php'; 
 
@@ -79,6 +80,6 @@ try {
     exit;
 
 } catch (PDOException $e) {
-    die("Error en la base de datos: " . $e->getMessage());
+    die("Error en la base de datos: " . hv_error_interno($e));
 }
 ?>

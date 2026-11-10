@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // Validar seguridad del rol
 if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
@@ -117,14 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_caso'])) {
             echo json_encode(['status' => 'success', 'message' => 'Registro actualizado correctamente.']);
 
         } catch(Exception $e) {
-            echo json_encode(['status' => 'error', 'message' => 'Error al actualizar el registro: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => 'Error al actualizar el registro: ' . hv_error_interno($e)]);
         }
     } catch (Exception $e) {
         // ERROR: Redirige de vuelta al editor manteniendo el ID y anexando el error ocurrido
-        $mensajeError = urlencode($e->getMessage());
+        $mensajeError = urlencode(hv_error_interno($e));
         exit;
     } catch(PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => 'Error de BD: ' . $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => 'Error de BD: ' . hv_error_interno($e)]);
         exit;
     }
 } 

@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // Si ya está logueado, redirigir al panel
 if (isset($_SESSION['usuario_id'])) {

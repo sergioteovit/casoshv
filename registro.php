@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // Si ya está logueado, lo mandamos al panel
 if (isset($_SESSION['usuario_id'])) {
@@ -45,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($e->getCode() == 23000) {
                 $error = "El nombre de usuario o correo electrónico ya existen. Por favor elige otros.";
             } else {
-                $error = "Ocurrió un error al registrar: " . $e->getMessage();
+                $error = "Ocurrió un error al registrar: " . hv_error_interno($e);
             }
         }
     }

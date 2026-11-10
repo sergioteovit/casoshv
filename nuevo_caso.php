@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // 1. SEGURIDAD: Si no está logueado o es un rol 'Invitado', bloquear acceso
 if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
@@ -105,7 +106,7 @@ require_once __DIR__ . '/seguridad.php';
                   <span class="badge bg-secondary ms-1"><?= $rolUsuario ?></span>
               </span>
               <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
-              <a href="logout.php" class="btn btn-sm btn-danger">Salir</a>
+              <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
           </div>
         </div>
       </div>

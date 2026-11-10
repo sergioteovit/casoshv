@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 // Si no hay sesión, redirigir al login
 if (!isset($_SESSION['usuario_id'])) {
     header("Location: login.php");
@@ -16,7 +17,7 @@ try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch(PDOException $e) {
-    die("Error de conexión a la Base de Datos: " . $e->getMessage());
+    die("Error de conexión a la Base de Datos: " . hv_error_interno($e));
 }
 
 // Procesar eliminación si se recibe el ID por parámetro GET
@@ -33,7 +34,7 @@ if (isset($_GET['eliminar'])) {
         header("Location: lista_casos.php?msg=deleted");
         exit;
     } catch(Exception $e) {
-        $error = "Error al eliminar el registro: " . $e->getMessage();
+        $error = "Error al eliminar el registro: " . hv_error_interno($e);
     }
 }
 
@@ -156,7 +157,7 @@ $totalCasos = $total_casos;
               <i class="bi bi-person-circle"></i> <?= htmlspecialchars($_SESSION['nombre_completo']) ?> (<?= htmlspecialchars($rolUsuario) ?>)
           </span>
           <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
-          <a href="logout.php" class="btn btn-sm btn-danger">Salir</a>
+          <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
       </div>
     </div>
   </div>

@@ -63,7 +63,7 @@ if ($rolActual !== 'Invitado') {
             <div class="d-grid gap-2 mt-4">
                 <a href="cuenta_pendiente.php" class="btn btn-primary fw-bold"><i class="bi bi-arrow-clockwise me-1"></i> Comprobar de nuevo</a>
                 <a href="perfil.php" class="btn btn-outline-secondary">Mi perfil</a>
-                <a href="logout.php" class="btn btn-outline-danger">Salir</a>
+                <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-outline-danger">Salir</a>
             </div>
         </div>
     </div>

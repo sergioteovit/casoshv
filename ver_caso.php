@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // 1. SEGURIDAD: Bloquear si no está logueado o si es un rol 'Invitado'
 if (!isset($_SESSION['usuario_id'])) {
@@ -41,7 +42,7 @@ try {
     $jsonExistente = $resultado['datos_completos'];
 
 } catch(PDOException $e) {
-    die("Error de conexión: " . $e->getMessage());
+    die("Error de conexión: " . hv_error_interno($e));
 }
 ?>
 <!DOCTYPE html>
@@ -139,7 +140,7 @@ try {
                   <span class="badge bg-secondary ms-1"><?= $rolUsuario ?></span>
               </span>
               <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
-              <a href="logout.php" class="btn btn-sm btn-danger">Salir</a>
+              <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // Validar que el usuario esté logueado (Cualquier rol tiene acceso)
 if (!isset($_SESSION['usuario_id'])) {
@@ -105,7 +106,7 @@ try {
             header("Location: hyfm.php?msg=creado");
             exit;
         } catch (PDOException $e) {
-            $error_creacion = "Error al guardar la tarjeta: " . $e->getMessage();
+            $error_creacion = "Error al guardar la tarjeta: " . hv_error_interno($e);
         }
     }
     
@@ -133,7 +134,7 @@ try {
             header("Location: hyfm.php?msg=eliminado");
             exit;
         } catch (PDOException $e) {
-            $error_eliminacion = "Error al eliminar la tarjeta: " . $e->getMessage();
+            $error_eliminacion = "Error al eliminar la tarjeta: " . hv_error_interno($e);
         }
     }
     
@@ -171,7 +172,7 @@ try {
                 die("Error: La tarjeta solicitada no existe.");
             }
         } catch (PDOException $e) {
-            die("Error al procesar la descarga: " . $e->getMessage());
+            die("Error al procesar la descarga: " . hv_error_interno($e));
         }
     }
     
@@ -223,7 +224,7 @@ try {
                 $error_descarga = "La colección está vacía. No hay tarjetas para descargar.";
             }
         } catch (PDOException $e) {
-            $error_descarga = "Error de base de datos al generar el ZIP: " . $e->getMessage();
+            $error_descarga = "Error de base de datos al generar el ZIP: " . hv_error_interno($e);
         }
     }
     
@@ -275,7 +276,7 @@ try {
             header("Location: hyfm.php?msg=actualizado");
             exit;
         } catch (PDOException $e) {
-            $error_edicion = "Error al actualizar la tarjeta: " . $e->getMessage();
+            $error_edicion = "Error al actualizar la tarjeta: " . hv_error_interno($e);
         }
     }
     
@@ -333,7 +334,7 @@ try {
     $tarjetas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
-    die("Error de conexión o consulta: " . $e->getMessage());
+    die("Error de conexión o consulta: " . hv_error_interno($e));
 }
 ?>
 <!DOCTYPE html>
@@ -363,7 +364,7 @@ try {
       </ul>
       <div class="d-flex align-items-center text-white">
           <span class="me-3 small"><i class="bi bi-person-circle text-primary me-1"></i> <?= htmlspecialchars($_SESSION['nombre_completo'] ?? 'Usuario') ?></span>
-          <a href="logout.php" class="btn btn-sm btn-danger">Salir</a>
+          <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
       </div>
     </div>
   </div>

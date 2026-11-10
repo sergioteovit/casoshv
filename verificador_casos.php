@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // 1. SEGURIDAD ESTRICTA: Solo Administradores
 if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] !== 'Administrador') {
@@ -21,7 +22,7 @@ try {
     $casos_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
-    die("Error de conexión: " . $e->getMessage());
+    die("Error de conexión: " . hv_error_interno($e));
 }
 
 // 2. PROCESAMIENTO DE JSON Y LISTA MAESTRA DE VARIABLES
@@ -105,7 +106,7 @@ $casos_mostrar = array_slice($casos_procesados, $offset, $casos_por_pagina);
       </ul>
       <div class="d-flex align-items-center text-white">
           <span class="me-3 small"><i class="bi bi-person-circle text-primary me-1"></i> <?= htmlspecialchars($_SESSION['nombre_completo'] ?? 'Admin') ?></span>
-          <a href="logout.php" class="btn btn-sm btn-danger">Salir</a>
+          <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
       </div>
     </div>
   </div>

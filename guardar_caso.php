@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/seguridad.php';
+hv_iniciar_sesion();
 
 // Validar seguridad básica antes de procesar
 if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
@@ -102,15 +103,15 @@ try {
             exit;
 
         } catch(Exception $e) {
-            echo json_encode(['status' => 'error', 'message' => 'Error al guardar el registro: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => 'Error al guardar el registro: ' . hv_error_interno($e)]);
         }
     }
 
 } catch (Exception $e) {
-    echo json_encode(['status' => 'error', 'message' => 'Error al guardar el registro: ' . $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => 'Error al guardar el registro: ' . hv_error_interno($e)]);
     exit;
 } catch (PDOException $e) {
-    echo json_encode(['status' => 'error', 'message' => 'Error de conexión a BD: ' . $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => 'Error de conexión a BD: ' . hv_error_interno($e)]);
     exit;
 }
 ?>
