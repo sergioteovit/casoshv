@@ -6,6 +6,9 @@ if (!isset($_SESSION['usuario_id'])) {
     die("Acceso denegado. Debes iniciar sesión.");
 }
 
+require_once __DIR__ . '/seguridad.php';
+hv_bloquear_invitado();
+
 // 2. VALIDAR ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     die("Error: No se especificó el ID del caso.");

@@ -49,7 +49,7 @@ $_SESSION['captcha_resultado'] = $num1 + $num2;
             
             <?php if(isset($_GET['msg']) && $_GET['msg'] == 'registrado'): ?>
                 <div class="alert alert-success small py-2 text-center">
-                    ¡Cuenta creada con éxito! Ahora puedes iniciar sesión.
+                    ¡Cuenta creada con éxito! Un administrador debe activarla antes de que puedas ver los casos.
                 </div>
             <?php endif; ?>
 

@@ -21,6 +21,16 @@ function hv_iniciar_sesion()
     session_start();
 }
 
+// Las cuentas nuevas (rol Invitado) no ven ningún contenido hasta que un administrador les asigna
+// otro rol: se envían a cuenta_pendiente.php, que vuelve a leer el rol de la base de datos.
+function hv_bloquear_invitado()
+{
+    if (($_SESSION['rol'] ?? 'Invitado') === 'Invitado') {
+        header('Location: cuenta_pendiente.php');
+        exit;
+    }
+}
+
 function hv_token_csrf()
 {
     if (empty($_SESSION['csrf_token'])) {

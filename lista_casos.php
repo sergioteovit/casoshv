@@ -9,6 +9,7 @@ $rolUsuario = $_SESSION['rol']; // 'Invitado', 'Editor', o 'Administrador'
 
 require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/seguridad.php';
+hv_bloquear_invitado();
 
 try {
     // Conexión usando PDO para máxima seguridad
