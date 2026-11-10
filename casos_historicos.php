@@ -132,6 +132,11 @@ try {
             die("Acceso denegado: Los invitados no tienen permiso para realizar esta acción.");
         }
 
+        if (!hv_csrf_valido($_POST['csrf_token'] ?? null)) {
+            http_response_code(403);
+            die("Solicitud no válida. Recarga la página e inténtalo de nuevo.");
+        }
+
         $titulo = trim($_POST['titulo_caso'] ?? '');
         $enunciado = trim($_POST['enunciado'] ?? '');
         $fuentes = trim($_POST['fuentes_bibliograficas'] ?? '');
@@ -424,6 +429,7 @@ try {
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content border-0 shadow">
       <form action="casos_historicos.php" method="POST">
+        <input type="hidden" name="csrf_token" value="<?= hv_token_csrf() ?>">
         <input type="hidden" name="accion" value="crear_caso">
         <div class="modal-header bg-info text-white">
           <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Crear Nuevo Caso Clínico Histórico</h5>
@@ -508,6 +514,7 @@ try {
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content border-0 shadow">
       <form action="casos_historicos.php" method="POST">
+        <input type="hidden" name="csrf_token" value="<?= hv_token_csrf() ?>">
         <input type="hidden" name="accion" value="editar_caso">
         <input type="hidden" name="id_caso" id="edit_id_caso">
 

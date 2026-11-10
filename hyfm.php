@@ -50,6 +50,12 @@ require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/seguridad.php';
 hv_bloquear_invitado();
 
+// Crear y editar tarjetas solo con el token CSRF de la sesión
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hv_csrf_valido($_POST['csrf_token'] ?? null)) {
+    http_response_code(403);
+    die("Solicitud no válida. Recarga la página e inténtalo de nuevo.");
+}
+
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -590,6 +596,7 @@ try {
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow">
       <form action="hyfm.php" method="POST">
+        <input type="hidden" name="csrf_token" value="<?= hv_token_csrf() ?>">
         <div class="modal-header bg-info text-white">
           <h5 class="modal-title fw-bold" id="modalNuevaTarjetaLabel">
               <i class="bi bi-person-badge-fill me-2"></i>Crear Nueva Tarjeta Coleccionable
@@ -650,6 +657,7 @@ try {
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow">
       <form action="hyfm.php" method="POST">
+        <input type="hidden" name="csrf_token" value="<?= hv_token_csrf() ?>">
         <div class="modal-header bg-warning text-dark">
           <h5 class="modal-title fw-bold" id="modalEditarTarjetaLabel">
               <i class="bi bi-pencil-square me-2"></i>Editar Tarjeta Coleccionable

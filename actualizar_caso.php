@@ -15,6 +15,12 @@ require_once __DIR__ . '/subidas.php';
 require_once __DIR__ . '/seguridad.php';
 
 // Asegurar que recibimos el ID del caso a actualizar
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hv_csrf_valido($_POST['csrf_token'] ?? null)) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'La sesión cambió o la solicitud no es válida. Recarga la página e inténtalo de nuevo (copia antes lo que hayas escrito).']);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_caso'])) {
     $idCaso = isset($_POST['id_caso']) ? intval($_POST['id_caso']) : null;
     

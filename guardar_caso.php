@@ -8,8 +8,7 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
     exit;
 }
 
-// Configurar cabeceras para aceptar peticiones de otros dominios (CORS) si es necesario
-header('Access-Control-Allow-Origin: *');
+// Solo se aceptan peticiones del propio gestor (sin CORS abierto y con token CSRF)
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config_bd.php';
@@ -21,7 +20,12 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        
+        if (!hv_csrf_valido($_POST['csrf_token'] ?? null)) {
+            http_response_code(403);
+            echo json_encode(['status' => 'error', 'message' => 'La sesión cambió o la solicitud no es válida. Recarga la página e inténtalo de nuevo (copia antes lo que hayas escrito).']);
+            exit;
+        }
+
         /*$json_recibido = file_get_contents('php://input');
         $_DATA = json_decode($json_recibido, true); // Lo convertimos en un arreglo asociativo de PHP
 

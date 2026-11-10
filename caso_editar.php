@@ -1394,6 +1394,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const payloadFinal = new FormData();
         payloadFinal.append('id_caso', idCasoEditar); // Enviamos el ID obligatorio para la consulta SQL UPDATE
         payloadFinal.append('datos_json', JSON.stringify(datosDelCaso));
+        payloadFinal.append('csrf_token', '<?= hv_token_csrf() ?>');
 
         // Adjuntamos nuevos archivos si el usuario seleccionó más en este proceso de edición
         archivosLaboratorio.forEach((file) => {

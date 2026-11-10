@@ -6,8 +6,15 @@ if (!isset($_SESSION['usuario_id'])) {
 }
 
 require_once __DIR__ . '/config_bd.php';
+require_once __DIR__ . '/seguridad.php';
 
 $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
+
+// Un envío sin el token CSRF de la sesión no cambia nada
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !hv_csrf_valido($_POST['csrf_token'] ?? null)) {
+    $error_perfil = "La solicitud no es válida. Recarga la página e inténtalo de nuevo.";
+    unset($_POST['accion']);
+}
 
 // ==========================================
 // PROCESAR ACTUALIZACIÓN DE PERFIL Y CONTRASEÑA
@@ -117,6 +124,7 @@ $perfil = $stmt->fetch(PDO::FETCH_ASSOC);
                     <?php endif; ?>
 
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="<?= hv_token_csrf() ?>">
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label small text-muted">Usuario (Solo lectura)</label>

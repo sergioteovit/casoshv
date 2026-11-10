@@ -9,6 +9,8 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
 }
 
 $rolUsuario = $_SESSION['rol']; // Guardamos el rol ('Editor' o 'Administrador')
+
+require_once __DIR__ . '/seguridad.php';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -1354,6 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Empaquetamos todo el objeto estructurado en el FormData definitivo
         const payloadFinal = new FormData();
         payloadFinal.append('datos_json', JSON.stringify(datosDelCaso));
+        payloadFinal.append('csrf_token', '<?= hv_token_csrf() ?>');
 
         // Adjuntar los archivos físicos reales del arreglo global
         archivosLaboratorio.forEach((file) => {
