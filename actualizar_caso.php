@@ -12,6 +12,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/subidas.php';
+require_once __DIR__ . '/seguridad.php';
 
 // Asegurar que recibimos el ID del caso a actualizar
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_caso'])) {
@@ -25,6 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_caso'])) {
 
         if (!$idCaso || !$datosJson) {
             echo json_encode(['status' => 'error', 'message' => 'Faltan parámetros requeridos para actualizar.']);
+            exit;
+        }
+        if (!hv_json_objeto_valido($datosJson)) {
+            echo json_encode(['status' => 'error', 'message' => 'Los datos del caso no tienen un formato válido. No se guardó nada.']);
             exit;
         }
         

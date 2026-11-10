@@ -10,6 +10,8 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] === 'Invitado') {
 
 $rolUsuario = $_SESSION['rol'];
 
+require_once __DIR__ . '/seguridad.php';
+
 // 2. VALIDAR ID: Verificar que llegue un ID válido por la URL
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     header("Location: lista_casos.php?error=no_id");
@@ -1428,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
         // --- INYECTAR DATOS DESDE PHP A JAVASCRIPT ---
         // Recuperamos el JSON completo de la base de datos remoto
-        const datosPrecargados = <?php echo $jsonExistente; ?>;
+        const datosPrecargados = <?php echo hv_json_para_script($jsonExistente); ?>;
         const idCasoEditar = <?php echo $idCaso; ?>;
         
         // Función encargada de restaurar toda la información del formulario

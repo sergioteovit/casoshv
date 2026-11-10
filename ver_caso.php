@@ -1427,7 +1427,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
         // --- INYECTAR DATOS DESDE PHP A JAVASCRIPT ---
         // Recuperamos el JSON completo de la base de datos remoto
-        const datosPrecargados = <?php echo $jsonExistente; ?>;
+        const datosPrecargados = <?php echo hv_json_para_script($jsonExistente); ?>;
         const idCasoEditar = <?php echo $idCaso; ?>;
 
         // Función encargada de restaurar toda la información del formulario

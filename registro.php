@@ -77,7 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
 
             <?php if(isset($error)): ?>
-                <div class="alert alert-danger small py-2 text-center"><?= $error ?></div>
+                <div class="alert alert-danger small py-2 text-center"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
 
             <form action="registro.php" method="POST" id="formRegistro">

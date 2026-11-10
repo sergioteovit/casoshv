@@ -14,6 +14,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/subidas.php';
+require_once __DIR__ . '/seguridad.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
@@ -53,7 +54,11 @@ try {
             echo json_encode(['status' => 'error', 'message' => 'No se recibieron datos del formulario.']);
             exit;
         }
-        
+        if (!hv_json_objeto_valido($datosJson)) {
+            echo json_encode(['status' => 'error', 'message' => 'Los datos del caso no tienen un formato válido. No se guardó nada.']);
+            exit;
+        }
+
         // 3. PROCESAR SUBIDA DE ARCHIVOS (solo imágenes, PDF y Word; si uno no es válido no se guarda nada)
         $validacion = hv_subidas_validar('archivos');
         if ($validacion['error'] !== null) {

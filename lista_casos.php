@@ -153,7 +153,7 @@ $totalCasos = $total_casos;
       </ul>
       <div class="d-flex align-items-center text-white">
           <span class="me-3 small">
-              <i class="bi bi-person-circle"></i> <?= $_SESSION['nombre_completo'] ?> (<?= $rolUsuario ?>)
+              <i class="bi bi-person-circle"></i> <?= htmlspecialchars($_SESSION['nombre_completo']) ?> (<?= htmlspecialchars($rolUsuario) ?>)
           </span>
           <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
           <a href="logout.php" class="btn btn-sm btn-danger">Salir</a>
@@ -321,7 +321,7 @@ $totalCasos = $total_casos;
                                         </a>
                                         <button type="button" 
                                                 class="btn btn-sm btn-outline-info btn-descargar-json" 
-                                                data-titulo="<?= pathinfo($identificador, PATHINFO_FILENAME); ?>"
+                                                data-titulo="<?= htmlspecialchars(pathinfo($identificador, PATHINFO_FILENAME), ENT_QUOTES, 'UTF-8'); ?>"
                                                 data-json='<?= htmlspecialchars($row['datos_completos'], ENT_QUOTES, 'UTF-8'); ?>'
                                                 title="Descargar JSON del Caso">
                                             <i class="bi bi-download"></i> JSON

@@ -31,6 +31,29 @@ function hv_bloquear_invitado()
     }
 }
 
+// Convierte el JSON guardado de un caso en un literal seguro para escribirlo dentro de <script>:
+// se vuelve a codificar con <, >, &, ' y " escapados, así un "</script>" en un campo no cierra la etiqueta.
+// Si el JSON guardado no es válido devuelve un objeto vacío.
+function hv_json_para_script($jsonGuardado)
+{
+    $datos = json_decode((string)$jsonGuardado);
+    if (!is_object($datos) && !is_array($datos)) {
+        $datos = new stdClass();
+    }
+    $resultado = json_encode($datos, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+    return $resultado === false ? '{}' : $resultado;
+}
+
+// Comprueba que el texto recibido sea un objeto JSON (lo que envían los formularios de casos).
+function hv_json_objeto_valido($texto)
+{
+    if (!is_string($texto) || $texto === '') {
+        return false;
+    }
+    $datos = json_decode($texto);
+    return json_last_error() === JSON_ERROR_NONE && is_object($datos);
+}
+
 function hv_token_csrf()
 {
     if (empty($_SESSION['csrf_token'])) {
