@@ -5,7 +5,7 @@
 require_once __DIR__ . '/estadisticas_comun.php';
 
 // Subir este número al cambiar hv.css para que los navegadores no usen la copia anterior
-define('HV_VERSION_ESTILOS', '5');
+define('HV_VERSION_ESTILOS', '7');
 
 function hv_iniciales($nombre)
 {
@@ -56,7 +56,10 @@ function hv_encabezado($titulo, $activa = '', $opciones = [])
     $esAdmin = $conSesion && ($_SESSION['Role'] ?? '') === 'Administrator';
     $nombre = $conSesion ? (string)($_SESSION['Username'] ?? '') : '';
 
-    $enlaces = ['posiciones' => ['index.php', 'Posiciones', 'bi-trophy']];
+    $enlaces = [
+        'posiciones' => ['index.php', 'Posiciones', 'bi-trophy'],
+        'descargar'  => ['index.php#descargar', 'Descargar', 'bi-download'],
+    ];
     if ($conSesion) {
         $enlaces['avance'] = ['mi_avance.php', 'Mi avance', 'bi-graph-up-arrow'];
         $enlaces['grupos'] = ['mis_grupos.php', 'Grupos', 'bi-people'];
@@ -87,7 +90,7 @@ function hv_encabezado($titulo, $activa = '', $opciones = [])
 </head>
 <body class="<?php echo h($clase); ?>">
     <?php if ($mostrarBarra): ?>
-<nav class="navbar navbar-expand-lg navbar-dark hv-barra sticky-top">
+<nav class="navbar navbar-expand-xl navbar-dark hv-barra sticky-top">
     <div class="container">
         <a class="navbar-brand" href="index.php">
             <img src="assets/img/logo-hv-blanco.png" alt="Hospital Virtual FacMed · Desafío Clínico">
@@ -96,7 +99,7 @@ function hv_encabezado($titulo, $activa = '', $opciones = [])
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="hvMenu">
-            <ul class="navbar-nav mx-auto gap-1 my-2 my-lg-0">
+            <ul class="navbar-nav mx-auto gap-1 my-2 my-xl-0">
                 <?php foreach ($enlaces as $clave => $enlace): ?>
                     <li class="nav-item">
                         <a class="nav-link<?php echo $clave === $activa ? ' active' : ''; ?>" href="<?php echo h($enlace[0]); ?>"<?php echo $clave === $activa ? ' aria-current="page"' : ''; ?>>
@@ -105,7 +108,7 @@ function hv_encabezado($titulo, $activa = '', $opciones = [])
                     </li>
                 <?php endforeach; ?>
             </ul>
-            <div class="d-flex align-items-center gap-2 pb-2 pb-lg-0">
+            <div class="d-flex align-items-center gap-2 pb-2 pb-xl-0">
                 <?php if ($conSesion): ?>
                     <span class="hv-avatar" aria-hidden="true"><?php echo h(hv_iniciales($nombre)); ?></span>
                     <span class="hv-usuario me-2"><?php echo h($nombre); ?></span>

@@ -113,7 +113,8 @@ h1, h2, h3, h4, h5, h6, .hv-titulo {
     color: rgba(255, 255, 255, .82);
     font-weight: 700;
     border-radius: 999px;
-    padding: .45rem .9rem !important;
+    padding: .45rem .8rem !important;
+    white-space: nowrap;
     transition: background-color .2s, color .2s;
 }
 .hv-barra .nav-link:hover, .hv-barra .nav-link:focus { color: #fff; background: rgba(255, 255, 255, .12); }
@@ -344,6 +345,31 @@ h1, h2, h3, h4, h5, h6, .hv-titulo {
         radial-gradient(circle at 80% 15%, rgba(var(--hv-turquesa-rgb), .35), transparent 40%),
         linear-gradient(135deg, var(--hv-morado-oscuro), var(--hv-morado));
 }
+
+/* Panel oscuro dentro de una tarjeta (descarga) */
+.hv-panel-oscuro {
+    color: #fff;
+    background:
+        radial-gradient(circle at 20% 15%, rgba(var(--hv-turquesa-rgb), .45), transparent 45%),
+        linear-gradient(160deg, var(--hv-morado-medio), var(--hv-morado-oscuro));
+}
+.hv-figura-descarga { max-height: 15rem; width: auto; margin-top: 2rem; filter: drop-shadow(0 1rem 1.5rem rgba(0, 0, 0, .3)); }
+
+/* Lista numerada con círculos */
+.hv-pasos { list-style: none; counter-reset: paso; padding: 0; margin: 0; }
+.hv-pasos li { counter-increment: paso; position: relative; padding: 0 0 1rem 3rem; }
+.hv-pasos li::before {
+    content: counter(paso);
+    position: absolute; left: 0; top: -.15rem;
+    width: 2.1rem; height: 2.1rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--hv-morado); color: #fff;
+    font-family: var(--hv-fuente-titulos); font-weight: 800;
+}
+.hv-pasos code { color: var(--hv-morado-medio); background: var(--hv-morado-claro); padding: .05rem .35rem; border-radius: .35rem; }
+
+/* Los anclajes no quedan escondidos bajo la barra fija */
+section[id] { scroll-margin-top: 5.5rem; }
 
 /* Aparición suave al cargar */
 .hv-aparecer { animation: hv-aparecer .6s ease both; }

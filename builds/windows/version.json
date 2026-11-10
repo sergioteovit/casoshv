@@ -1,6 +1,6 @@
 {
-  "version": "26.09.29",
-  "build_number": 1,
+  "version": "26.11.10",
+  "build_number": 2,
   "download_url": "https://hospitalvirtual.facmed.unam.mx/dev/casoshv/builds/windows/HospitalVirtual-latest.zip",
-  "changelog": "[26.09.29]: Versión inicial"
+  "changelog": "[26.11.10]: Sesión segura al guardar el avance (tus resultados cuentan en las tablas de posiciones), puntajes, estrellas e insignias en los retos y el caso clínico, conversación por voz con el paciente y pantalla de carga del caso. [26.09.29]: Versión inicial"
 }
