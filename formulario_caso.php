@@ -457,13 +457,19 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             <textarea class="form-control form-control-sm" id="vista-previa-exploracion" rows="6" readonly></textarea>
         </details>
 
-        <!-- ESTUDIOS, DIAGNÓSTICO Y TRATAMIENTO -->
-        <h2 class="section-title">ESTUDIOS, DIAGNÓSTICO Y TRATAMIENTO</h2>
+        <!-- LABORATORIOS, IMÁGENES Y OTROS EXÁMENES (el texto de "laboratorios" se arma con los apartados al guardar) -->
+        <h2 class="section-title">LABORATORIOS, IMÁGENES Y OTROS EXÁMENES</h2>
+        <p class="text-muted small mb-3">Documenta de forma ordenada los estudios que sustentan el diagnóstico, de los generales a los específicos o confirmatorios. No todo lo que podría pedirse, sino lo que el estudiante necesita para resolver el caso.</p>
 
-        <div class="mb-3">
-            <label for="laboratorios" class="form-label fw-bold">Laboratorios, Imágenes y otros exámenes:</label>
-            <textarea class="form-control mb-2" id="laboratorios" name="laboratorios" rows="3" placeholder="Describe los hallazgos principales de laboratorio o gabinete..."></textarea>
-            
+        <div class="mb-4 d-none bloque-formato-anterior" id="bloque-laboratorios-anterior">
+            <label for="laboratorios_texto_libre" class="form-label fw-bold"><i class="bi bi-clock-history me-1"></i> Laboratorios e imágenes en texto libre (formato anterior):</label>
+            <textarea class="form-control" id="laboratorios_texto_libre" name="laboratorios_texto_libre" rows="6"></textarea>
+            <div class="form-text">Este caso se capturó antes de los apartados. Puedes pasar el texto a los apartados de abajo; lo que quede aquí se conserva al inicio.</div>
+        </div>
+
+        <div id="apartados-laboratorios"></div>
+
+        <div class="mb-4">
             <!-- Componente de Archivos Adjuntos -->
             <div class="border p-3 rounded bg-light">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -481,10 +487,45 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             </div>
         </div>
 
-        <div class="mb-4">
-            <label for="diagnostico_tratamiento" class="form-label fw-bold">Diagnóstico, Tratamiento y seguimiento:</label>
-            <textarea class="form-control" id="diagnostico_tratamiento" name="diagnostico_tratamiento" rows="3"></textarea>
+        <!-- DIAGNÓSTICO, TRATAMIENTO Y SEGUIMIENTO (el texto de "diagnostico_tratamiento" se arma con los apartados al guardar) -->
+        <h2 class="section-title">DIAGNÓSTICO, TRATAMIENTO Y SEGUIMIENTO</h2>
+        <p class="text-muted small mb-3">Integra el diagnóstico final con un plan terapéutico basado en la evidencia y un seguimiento coherente con la evolución esperada del paciente.</p>
+
+        <div class="mb-4 d-none bloque-formato-anterior" id="bloque-diagnostico-anterior">
+            <label for="diagnostico_tratamiento_texto_libre" class="form-label fw-bold"><i class="bi bi-clock-history me-1"></i> Diagnóstico, tratamiento y seguimiento en texto libre (formato anterior):</label>
+            <textarea class="form-control" id="diagnostico_tratamiento_texto_libre" name="diagnostico_tratamiento_texto_libre" rows="6"></textarea>
+            <div class="form-text">Este caso se capturó antes de los apartados. Puedes pasar el texto a los apartados de abajo; lo que quede aquí se conserva al inicio.</div>
         </div>
+
+        <div id="apartados-diagnostico"></div>
+
+        <div class="mb-4">
+            <h6 class="fw-bold text-secondary mb-1">Estadificación</h6>
+            <div class="form-text mt-0 mb-2">Escalas que apliquen al caso (CURB-65, Wells, CHA₂DS₂-VASc, Glasgow, Child-Pugh, NYHA, Killip-Kimball, GOLD…), siempre con puntaje, interpretación e implicaciones.</div>
+            <div id="filas-estadificacion"></div>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-estadificacion"><i class="bi bi-plus-circle me-1"></i> Agregar escala</button>
+        </div>
+
+        <div id="apartados-tratamiento"></div>
+
+        <div class="mb-4">
+            <label class="form-label small fw-bold mb-1">Tratamiento farmacológico</label>
+            <div class="form-text mt-0 mb-2">Un medicamento por renglón.</div>
+            <div id="filas-farmacologico"></div>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-farmacologico"><i class="bi bi-plus-circle me-1"></i> Agregar medicamento</button>
+        </div>
+
+        <div id="apartados-tratamiento-2"></div>
+
+        <div id="apartados-seguimiento"></div>
+
+        <details class="mb-4 border rounded p-3 bg-light">
+            <summary class="fw-bold text-secondary"><i class="bi bi-eye me-1"></i> Ver el texto que se guardará para el juego (laboratorios y diagnóstico, tratamiento y seguimiento)</summary>
+            <label class="form-label small fw-bold text-muted mt-3">Laboratorios, imágenes y otros exámenes</label>
+            <textarea class="form-control form-control-sm mb-3" id="vista-previa-laboratorios" rows="6" readonly></textarea>
+            <label class="form-label small fw-bold text-muted">Diagnóstico, tratamiento y seguimiento</label>
+            <textarea class="form-control form-control-sm" id="vista-previa-diagnostico" rows="6" readonly></textarea>
+        </details>
 
         <!-- DIAGNÓSTICOS DIFERENCIALES (Dinámico) -->
         <h2 class="section-title">DIAGNÓSTICOS DIFERENCIALES</h2>
@@ -855,7 +896,7 @@ function construirApartados(idContenedor, grupos, clase) {
         const bloque = document.createElement('div');
         bloque.className = 'mb-4 grupo-apartados';
         if (grupo.sexo) bloque.dataset.sexo = grupo.sexo;
-        let html = grupos.length > 1 || grupo.plegable ? `<h6 class="fw-bold text-secondary mb-2">${hvEscaparHtml(grupo.grupo)}</h6>` : '';
+        let html = grupo.grupo && (grupos.length > 1 || grupo.plegable || grupo.conTitulo) ? `<h6 class="fw-bold text-secondary mb-2">${hvEscaparHtml(grupo.grupo)}</h6>` : '';
         grupo.apartados.forEach(([clave, titulo, guia, sexo]) => {
             const campo = `<textarea class="form-control ${clase}" id="${clave}" name="${clave}" rows="2" data-titulo="${hvEscaparHtml(titulo)}"></textarea>`
                         + `<div class="form-text">${hvEscaparHtml(guia)}</div>`;
@@ -934,6 +975,137 @@ function armarExploracion() {
     return [libre.trim(), armado].filter(t => t !== '').join('\n\n');
 }
 
+// =================================================================
+// LABORATORIOS Y DIAGNÓSTICO, TRATAMIENTO Y SEGUIMIENTO
+// =================================================================
+const APARTADOS_LABORATORIOS = [
+    { grupo: 'Laboratorios básicos', apartados: [
+        ['lab_bh', 'Biometría hemática', 'Hb, Hto, leucocitos, fórmula diferencial, plaquetas.'],
+        ['lab_qs', 'Química sanguínea', 'Glucosa, urea/BUN, creatinina, electrolitos y otros según el caso.'],
+        ['lab_reactantes', 'Reactantes inflamatorios', 'PCR, PCT, VSG, ferritina, dímero D.'],
+        ['lab_funcion_organica', 'Pruebas de función orgánica', 'PFH, EGO, coagulación, enzimas cardiacas, perfil lipídico.']
+    ]},
+    { grupo: 'Estudios microbiológicos y patológicos (solo si el caso lo requiere)', plegable: true, apartados: [
+        ['micro_calidad', 'Calidad de la muestra', 'Adecuada o inadecuada, o criterios utilizados.'],
+        ['micro_directo', 'Examen directo', 'Gram, KOH, Ziehl-Neelsen, gota gruesa, en fresco, tinta china.'],
+        ['micro_cultivos', 'Cultivos', 'Medio utilizado, morfología colonial, tiempo de crecimiento.'],
+        ['micro_identificacion', 'Identificación', 'Pruebas bioquímicas, MALDI-TOF, PCR, ELISA, inmunofluorescencia.'],
+        ['micro_susceptibilidad', 'Susceptibilidad', 'Antibiograma, CIM, resistencias relevantes.']
+    ]},
+    { grupo: 'Imagenología (solo si el caso lo requiere)', plegable: true, apartados: [
+        ['img_rx', 'Radiografía', 'Descripción radiográfica.'],
+        ['img_us', 'Ultrasonido', 'Descripción de los hallazgos.'],
+        ['img_tac', 'Tomografía (TAC)', 'Descripción de los hallazgos.'],
+        ['img_rm', 'Resonancia magnética (RM)', 'Descripción de los hallazgos.'],
+        ['img_nuclear', 'Medicina nuclear', 'Descripción de los hallazgos.']
+    ]},
+    { grupo: 'Otros estudios', apartados: [
+        ['est_funcionales', 'Estudios funcionales', 'ECG, espirometría, gasometría, ecocardiograma, EEG, EMG.'],
+        ['est_especiales', 'Estudios especiales', 'Broncoscopia, colonoscopia, biopsia, LCR, citología.']
+    ]},
+    { grupo: 'Integración', apartados: [
+        ['lab_integracion', 'Integración diagnóstica de los estudios', 'Integra lo que aportan los estudios anteriores al diagnóstico.']
+    ]}
+];
+
+const APARTADOS_DIAGNOSTICO = [
+    { grupo: 'Diagnósticos', conTitulo: true, apartados: [
+        ['dx_sindromatico', 'Diagnóstico sindromático', ''],
+        ['dx_anatomico', 'Diagnóstico anatómico', ''],
+        ['dx_clinico', 'Diagnóstico clínico', ''],
+        ['dx_etiologico', 'Diagnóstico etiológico', ''],
+        ['dx_definitivo', 'Diagnóstico definitivo', '']
+    ]}
+];
+const APARTADOS_TRATAMIENTO = [
+    { grupo: 'Tratamiento', conTitulo: true, apartados: [
+        ['tx_medidas_generales', 'Medidas generales', 'Hospitalización, dieta, oxígeno, hidratación, aislamiento.']
+    ]}
+];
+const APARTADOS_TRATAMIENTO_2 = [
+    { grupo: '', apartados: [
+        ['tx_no_farmacologico', 'Tratamiento no farmacológico', 'Rehabilitación, ejercicio, curaciones, educación, suspensión de hábitos (modificaciones en el estilo de vida).'],
+        ['tx_procedimientos', 'Procedimientos', 'Cirugía, drenajes, biopsias, intubación, broncoscopia.']
+    ]}
+];
+const APARTADOS_SEGUIMIENTO = [
+    { grupo: 'Seguimiento', conTitulo: true, apartados: [
+        ['seg_proxima_cita', 'Próxima cita', 'Si es necesaria: cuándo y con qué objetivo.'],
+        ['seg_estudios', 'Estudios para la próxima cita', '']
+    ]}
+];
+
+// Tablas (listas de objetos): [campo, etiqueta, ejemplo, ancho de columna]
+const COLUMNAS_TABLAS = {
+    'filas-estadificacion': [['escala', 'Escala', 'Ej. CURB-65', 3], ['puntaje', 'Puntaje', 'Ej. 2', 2], ['interpretacion', 'Interpretación', '', 3], ['implicaciones', 'Implicaciones', '', 3]],
+    'filas-farmacologico': [['medicamento', 'Medicamento', 'Ej. Ceftriaxona', 3], ['dosis', 'Dosis', 'Ej. 1 g', 2], ['via', 'Vía', 'Ej. IV', 2], ['frecuencia', 'Frecuencia', 'Ej. cada 24 h', 2], ['duracion', 'Duración', 'Ej. 7 días', 2]]
+};
+
+function agregarFila(idContenedor, valores) {
+    const fila = document.createElement('div');
+    fila.className = 'row g-2 align-items-end mb-2 fila-tabla';
+    let html = '';
+    COLUMNAS_TABLAS[idContenedor].forEach(([campo, etiqueta, ejemplo, ancho]) => {
+        html += `<div class="col-12 col-md-${ancho}"><label class="form-label small text-muted mb-0">${hvEscaparHtml(etiqueta)}</label>`
+              + `<input type="text" class="form-control form-control-sm" data-campo="${campo}" placeholder="${hvEscaparHtml(ejemplo)}"></div>`;
+    });
+    html += '<div class="col-12 col-md-1"><button type="button" class="btn btn-sm btn-outline-danger w-100 btn-quitar-fila" title="Quitar renglón"><i class="bi bi-trash"></i></button></div>';
+    fila.innerHTML = html;
+    fila.querySelectorAll('input').forEach(entrada => {
+        const valor = valores ? valores[entrada.dataset.campo] : '';
+        entrada.value = (valor === undefined || valor === null) ? '' : String(valor);
+    });
+    fila.querySelector('.btn-quitar-fila').addEventListener('click', () => { fila.remove(); actualizarApartados(); });
+    document.getElementById(idContenedor).appendChild(fila);
+}
+
+// Renglones con algún dato, como lista de objetos
+function leerFilas(idContenedor) {
+    return Array.from(document.querySelectorAll(`#${idContenedor} .fila-tabla`)).map(fila => {
+        const objeto = {};
+        fila.querySelectorAll('input').forEach(entrada => { objeto[entrada.dataset.campo] = entrada.value.trim(); });
+        return objeto;
+    }).filter(objeto => Object.values(objeto).some(valor => valor !== ''));
+}
+
+function textoApartado(clave) {
+    const campo = document.getElementById(clave);
+    return campo && campo.value.trim() !== '' ? campo.dataset.titulo + ': ' + campo.value.trim() : '';
+}
+
+// Texto libre del formato anterior + texto armado; sin texto armado, el anterior se guarda exactamente igual
+function conTextoLibre(idLibre, armado) {
+    const libre = document.getElementById(idLibre).value;
+    if (armado === '') return libre;
+    return [libre.trim(), armado].filter(t => t !== '').join('\n\n');
+}
+
+function armarLaboratorios() {
+    return conTextoLibre('laboratorios_texto_libre', armarTextoApartados('apartado-laboratorios'));
+}
+
+function armarDiagnosticoTratamiento() {
+    const estadificacion = leerFilas('filas-estadificacion');
+    const farmacologico = leerFilas('filas-farmacologico');
+    const textoEstadificacion = estadificacion.length === 0 ? '' : 'Estadificación:\n' + estadificacion.map(f => '- ' + [
+        f.escala, f.puntaje ? 'Puntaje: ' + f.puntaje : '', f.interpretacion ? 'Interpretación: ' + f.interpretacion : '', f.implicaciones ? 'Implicaciones: ' + f.implicaciones : ''
+    ].filter(t => t !== '').join('. ')).join('\n');
+    const textoFarmacologico = farmacologico.length === 0 ? '' : 'Tratamiento farmacológico:\n' + farmacologico.map(f => '- ' + [
+        f.medicamento, f.dosis, f.via, f.frecuencia, f.duracion ? 'durante ' + f.duracion : ''
+    ].filter(t => t !== '').join(', ')).join('\n');
+    const armado = [
+        ...['dx_sindromatico', 'dx_anatomico', 'dx_clinico', 'dx_etiologico', 'dx_definitivo'].map(textoApartado),
+        textoEstadificacion,
+        textoApartado('tx_medidas_generales'),
+        textoFarmacologico,
+        textoApartado('tx_no_farmacologico'),
+        textoApartado('tx_procedimientos'),
+        textoApartado('seg_proxima_cita'),
+        textoApartado('seg_estudios')
+    ].filter(t => t !== '').join('\n\n');
+    return conTextoLibre('diagnostico_tratamiento_texto_libre', armado);
+}
+
 // Estado visual: apartados plegables abiertos o marcados si tienen texto, apartados según el sexo,
 // IMC y vista previa de los textos armados
 function actualizarApartados() {
@@ -950,12 +1122,28 @@ function actualizarApartados() {
     document.getElementById('texto-imc').textContent = imc ? 'IMC calculado: ' + imc + ' kg/m²' : '';
     document.getElementById('vista-previa-historia').value = armarHistoria();
     document.getElementById('vista-previa-exploracion').value = armarExploracion();
+    document.getElementById('vista-previa-laboratorios').value = armarLaboratorios();
+    document.getElementById('vista-previa-diagnostico').value = armarDiagnosticoTratamiento();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
 
     construirApartados('apartados-historia', APARTADOS_HISTORIA, 'apartado-historia');
     construirApartados('apartados-exploracion', APARTADOS_EXPLORACION, 'apartado-exploracion');
+    construirApartados('apartados-laboratorios', APARTADOS_LABORATORIOS, 'apartado-laboratorios');
+    construirApartados('apartados-diagnostico', APARTADOS_DIAGNOSTICO, 'apartado-diagnostico');
+    construirApartados('apartados-tratamiento', APARTADOS_TRATAMIENTO, 'apartado-diagnostico');
+    construirApartados('apartados-tratamiento-2', APARTADOS_TRATAMIENTO_2, 'apartado-diagnostico');
+    construirApartados('apartados-seguimiento', APARTADOS_SEGUIMIENTO, 'apartado-diagnostico');
+
+    // Tablas de estadificación y tratamiento farmacológico: renglones guardados (o uno vacío para empezar)
+    [['estadificacion', 'filas-estadificacion', 'btn-add-estadificacion'],
+     ['tx_farmacologico', 'filas-farmacologico', 'btn-add-farmacologico']].forEach(([clave, idContenedor, idBoton]) => {
+        const guardadas = Array.isArray(datosPrecargados[clave]) ? datosPrecargados[clave] : [];
+        guardadas.forEach(fila => { if (fila && typeof fila === 'object') agregarFila(idContenedor, fila); });
+        if (guardadas.length === 0 && MODO_FORMULARIO !== 'ver') agregarFila(idContenedor);
+        document.getElementById(idBoton).addEventListener('click', () => agregarFila(idContenedor));
+    });
 
     // Contadores para asegurar names únicos
     let contadorPreguntas = 1;
@@ -1357,6 +1545,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Textos que lee el juego, armados con el texto libre del formato anterior y los apartados
         datosDelCaso.historia = armarHistoria();
         datosDelCaso.exploracion = armarExploracion();
+        datosDelCaso.laboratorios = armarLaboratorios();
+        datosDelCaso.diagnostico_tratamiento = armarDiagnosticoTratamiento();
+        datosDelCaso.estadificacion = leerFilas('filas-estadificacion');
+        datosDelCaso.tx_farmacologico = leerFilas('filas-farmacologico');
 
         // Claves guardadas que el formulario ya no muestra (p. ej. el ART, que ahora se califica en el juego):
         // se conservan tal cual para no perder datos al editar. Las que el formulario maneja (aunque el autor
@@ -1634,7 +1826,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Formato anterior: si el caso no tiene todavía la clave del texto libre, su "historia" y su "exploracion"
     // guardadas pasan al cuadro de texto libre (los apartados nuevos empiezan vacíos)
     [['historia', 'historia_texto_libre', 'bloque-historia-anterior'],
-     ['exploracion', 'exploracion_texto_libre', 'bloque-exploracion-anterior']].forEach(([claveJuego, claveLibre, idBloque]) => {
+     ['exploracion', 'exploracion_texto_libre', 'bloque-exploracion-anterior'],
+     ['laboratorios', 'laboratorios_texto_libre', 'bloque-laboratorios-anterior'],
+     ['diagnostico_tratamiento', 'diagnostico_tratamiento_texto_libre', 'bloque-diagnostico-anterior']].forEach(([claveJuego, claveLibre, idBloque]) => {
         const campoLibre = document.getElementById(claveLibre);
         if (!(claveLibre in datosPrecargados) && typeof datosPrecargados[claveJuego] === 'string') {
             campoLibre.value = datosPrecargados[claveJuego];
