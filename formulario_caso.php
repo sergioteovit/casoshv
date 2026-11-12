@@ -83,6 +83,18 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
     <?php endif; ?>
 
     <form id="formulario-caso">
+        <div class="row g-4">
+            <!-- Índice de pasos (en celular, un menú desplegable) -->
+            <div class="col-lg-3">
+                <div class="hv-indice-pasos">
+                    <select class="form-select d-lg-none control-navegacion" id="selector-pasos" aria-label="Paso del formulario"></select>
+                    <nav class="d-none d-lg-block" id="indice-pasos" aria-label="Pasos del formulario"></nav>
+                    <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2 control-navegacion" id="btn-ver-todo"><i class="bi bi-list-ul me-1"></i>Ver todo</button>
+                </div>
+            </div>
+            <div class="col-lg-9">
+
+        <section class="paso-formulario" data-titulo="Datos del caso" data-icono="bi-card-heading">
 
         <!-- INFORMACIÓN GENERAL -->
         <h2 class="section-title">INFORMACIÓN GENERAL</h2>
@@ -343,6 +355,9 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             </div>
         </div>
 
+        </section>
+
+        <section class="paso-formulario" data-titulo="Historia clínica" data-icono="bi-journal-medical">
         <!-- PRESENTACIÓN DEL CASO -->
         <h2 class="section-title">PRESENTACIÓN DEL CASO</h2>
         
@@ -369,6 +384,9 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
 
         <div id="apartados-historia"></div>
 
+        </section>
+
+        <section class="paso-formulario" data-titulo="Exploración física" data-icono="bi-heart-pulse">
         <!-- EXPLORACIÓN FÍSICA (el texto de "exploracion" se arma con los apartados al guardar) -->
         <h2 class="section-title">EXPLORACIÓN FÍSICA</h2>
 
@@ -457,6 +475,9 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             <textarea class="form-control form-control-sm" id="vista-previa-exploracion" rows="6" readonly></textarea>
         </details>
 
+        </section>
+
+        <section class="paso-formulario" data-titulo="Estudios" data-icono="bi-clipboard2-data">
         <!-- LABORATORIOS, IMÁGENES Y OTROS EXÁMENES (el texto de "laboratorios" se arma con los apartados al guardar) -->
         <h2 class="section-title">LABORATORIOS, IMÁGENES Y OTROS EXÁMENES</h2>
         <p class="text-muted small mb-3">Documenta de forma ordenada los estudios que sustentan el diagnóstico, de los generales a los específicos o confirmatorios. No todo lo que podría pedirse, sino lo que el estudiante necesita para resolver el caso.</p>
@@ -487,6 +508,9 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             </div>
         </div>
 
+        </section>
+
+        <section class="paso-formulario" data-titulo="Diagnóstico y tratamiento" data-icono="bi-capsule">
         <!-- DIAGNÓSTICO, TRATAMIENTO Y SEGUIMIENTO (el texto de "diagnostico_tratamiento" se arma con los apartados al guardar) -->
         <h2 class="section-title">DIAGNÓSTICO, TRATAMIENTO Y SEGUIMIENTO</h2>
         <p class="text-muted small mb-3">Integra el diagnóstico final con un plan terapéutico basado en la evidencia y un seguimiento coherente con la evolución esperada del paciente.</p>
@@ -573,6 +597,9 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             </div>
         </div>
 
+        </section>
+
+        <section class="paso-formulario" data-titulo="Evaluación" data-icono="bi-patch-question">
         <!-- PREGUNTAS Y RESPUESTAS (Dinámico) -->
         <h2 class="section-title">PREGUNTAS Y POSIBLES RESPUESTAS</h2>
         
@@ -687,6 +714,9 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             </div>
         </div>
 
+        </section>
+
+        <section class="paso-formulario" data-titulo="Paciente virtual" data-icono="bi-person-video">
         <!-- PACIENTE VIRTUAL (JUEGO) -->
         <h2 class="section-title">PACIENTE VIRTUAL (JUEGO) <i class="bi bi-person-video ms-2 text-primary"></i></h2>
 
@@ -791,6 +821,17 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             <button type="button" id="btn-add-enlace" class="btn btn-sm btn-outline-primary mt-1">
                 <i class="bi bi-plus-circle me-1"></i> Agregar otro enlace
             </button>
+        </div>
+
+        </section>
+
+        <!-- Navegación entre pasos -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 pt-3 border-top" id="nav-pasos">
+            <button type="button" class="btn btn-outline-secondary control-navegacion" id="btn-paso-anterior"><i class="bi bi-arrow-left me-1"></i><span>Anterior</span></button>
+            <span class="small text-muted" id="texto-paso"></span>
+            <button type="button" class="btn btn-primary control-navegacion" id="btn-paso-siguiente"><span>Siguiente</span><i class="bi bi-arrow-right ms-1"></i></button>
+        </div>
+            </div>
         </div>
 
         <div class="hv-barra-guardar mt-5">
@@ -1849,12 +1890,146 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Modo ver: todo el formulario es de solo lectura
     if (MODO_FORMULARIO === 'ver') {
-        formulario.querySelectorAll('input, select, textarea, button').forEach(control => {
+        formulario.querySelectorAll('input, select:not(.control-navegacion), textarea, button:not(.control-navegacion)').forEach(control => {
             control.disabled = true;
         });
         prepararLecturaApartados();
     }
+
+    iniciarPasos();
 });
+
+// =================================================================
+// PASOS DEL FORMULARIO: una sección a la vez, con índice y estado de avance
+// =================================================================
+// Campos que indican el avance de cada paso (los que revisa el verificador). "@campo" es un texto
+// que se arma con los apartados o con el texto libre del formato anterior.
+const CAMPOS_POR_PASO = [
+    ['titulo_caso', 'departamentos', 'autores', 'sexo', 'edad', 'rango_edad', 'padecimiento', 'sistemas_anatomicos', 'asignaturas'],
+    ['resumen', '@historia'],
+    ['@exploracion', 'signos_ta', 'signos_fc', 'signos_fr', 'signos_temp', 'signos_sato2', 'somatometria_peso', 'somatometria_talla'],
+    ['@laboratorios'],
+    ['@diagnostico_tratamiento', 'diag_dif_1', 'diagnostico_correcto'],
+    ['pregunta_1', 'p1_opcion_1', 'p1_opcion_2', 'p1_opcion_3', 'p1_opcion_4', 'p1_correcta', 'nota_medica', 'soap_subjetivo', 'soap_objetivo', 'soap_analisis', 'soap_plan'],
+    ['prompts', 'tipo_interrogatorio']
+];
+let pasosFormulario = [];
+let pasoActual = 0;
+let viendoTodo = false;
+
+function campoConValor(nombre) {
+    if (nombre === '@historia') return armarHistoria().trim() !== '';
+    if (nombre === '@exploracion') return armarExploracion().trim() !== '';
+    if (nombre === '@laboratorios') return armarLaboratorios().trim() !== '';
+    if (nombre === '@diagnostico_tratamiento') return armarDiagnosticoTratamiento().trim() !== '';
+    return Array.from(document.querySelectorAll(`#formulario-caso [name="${nombre}"]`)).some(control =>
+        (control.type === 'checkbox' || control.type === 'radio') ? control.checked : String(control.value || '').trim() !== '');
+}
+
+function iniciarPasos() {
+    pasosFormulario = Array.from(document.querySelectorAll('.paso-formulario'));
+    const indice = document.getElementById('indice-pasos');
+    const selector = document.getElementById('selector-pasos');
+    pasosFormulario.forEach((paso, i) => {
+        const boton = document.createElement('button');
+        boton.type = 'button';
+        boton.className = 'hv-paso-indice control-navegacion';
+        boton.innerHTML = `<span class="hv-paso-numero">${i + 1}</span><span class="hv-paso-texto">`
+            + `<span class="hv-paso-titulo"><i class="bi ${hvEscaparHtml(paso.dataset.icono)} me-1"></i>${hvEscaparHtml(paso.dataset.titulo)}</span>`
+            + `<span class="hv-paso-estado"></span></span>`;
+        boton.addEventListener('click', () => mostrarPaso(i));
+        indice.appendChild(boton);
+        const opcion = document.createElement('option');
+        opcion.value = i;
+        selector.appendChild(opcion);
+    });
+    selector.addEventListener('change', () => mostrarPaso(parseInt(selector.value, 10)));
+    document.getElementById('btn-paso-anterior').addEventListener('click', () => mostrarPaso(pasoActual - 1));
+    document.getElementById('btn-paso-siguiente').addEventListener('click', () => mostrarPaso(pasoActual + 1));
+    document.getElementById('btn-ver-todo').addEventListener('click', () => viendoTodo ? mostrarPaso(pasoActual) : mostrarTodo());
+
+    const formulario = document.getElementById('formulario-caso');
+    formulario.addEventListener('input', actualizarIndicePasos);
+    formulario.addEventListener('change', actualizarIndicePasos);
+
+    // Al guardar con un campo obligatorio vacío en un paso oculto, se abre ese paso y se señala el campo
+    const botonGuardar = document.getElementById('btn-guardar');
+    if (botonGuardar) {
+        botonGuardar.addEventListener('click', (evento) => {
+            if (formulario.checkValidity()) return;
+            evento.preventDefault();
+            const invalido = formulario.querySelector(':invalid');
+            const paso = invalido ? invalido.closest('.paso-formulario') : null;
+            if (paso && paso.classList.contains('d-none')) mostrarPaso(pasosFormulario.indexOf(paso), false);
+            setTimeout(() => formulario.reportValidity(), 60);
+        });
+    }
+
+    const enlace = /^#paso-(\d+)$/.exec(window.location.hash);
+    actualizarIndicePasos();
+    mostrarPaso(enlace ? parseInt(enlace[1], 10) - 1 : 0, false);
+}
+
+function actualizarIndicePasos() {
+    const botones = document.querySelectorAll('#indice-pasos .hv-paso-indice');
+    const opciones = document.querySelectorAll('#selector-pasos option');
+    pasosFormulario.forEach((paso, i) => {
+        const campos = CAMPOS_POR_PASO[i] || [];
+        const llenos = campos.filter(campoConValor).length;
+        const estado = llenos === 0 ? 'vacio' : (llenos === campos.length ? 'completo' : 'progreso');
+        const texto = estado === 'completo' ? 'Completo' : (estado === 'vacio' ? 'Sin llenar' : `${llenos} de ${campos.length}`);
+        if (botones[i]) {
+            botones[i].dataset.estado = estado;
+            botones[i].querySelector('.hv-paso-estado').textContent = texto;
+        }
+        if (opciones[i]) opciones[i].textContent = `${i + 1}. ${paso.dataset.titulo} · ${texto}`;
+    });
+}
+
+function mostrarPaso(indice, desplazar = true) {
+    viendoTodo = false;
+    pasoActual = Math.max(0, Math.min(pasosFormulario.length - 1, indice));
+    pasosFormulario.forEach((paso, i) => paso.classList.toggle('d-none', i !== pasoActual));
+    document.querySelectorAll('#indice-pasos .hv-paso-indice').forEach((boton, i) => boton.classList.toggle('activo', i === pasoActual));
+    document.getElementById('selector-pasos').value = String(pasoActual);
+
+    const anterior = document.getElementById('btn-paso-anterior');
+    const siguiente = document.getElementById('btn-paso-siguiente');
+    anterior.classList.toggle('invisible', pasoActual === 0);
+    siguiente.classList.toggle('invisible', pasoActual === pasosFormulario.length - 1);
+    if (pasoActual > 0) anterior.querySelector('span').textContent = pasosFormulario[pasoActual - 1].dataset.titulo;
+    if (pasoActual < pasosFormulario.length - 1) siguiente.querySelector('span').textContent = 'Siguiente: ' + pasosFormulario[pasoActual + 1].dataset.titulo;
+    document.getElementById('texto-paso').textContent = `Paso ${pasoActual + 1} de ${pasosFormulario.length}`;
+    document.getElementById('nav-pasos').classList.remove('d-none');
+    document.getElementById('btn-ver-todo').innerHTML = '<i class="bi bi-list-ul me-1"></i>Ver todo';
+
+    if (window.history && history.replaceState) history.replaceState(null, '', '#paso-' + (pasoActual + 1));
+    if (MODO_FORMULARIO === 'ver') ajustarAlturasLectura(pasosFormulario[pasoActual]);
+    if (desplazar) {
+        const inicio = document.getElementById('formulario-caso').getBoundingClientRect().top + window.scrollY - 90;
+        window.scrollTo({ top: Math.max(0, inicio), behavior: 'smooth' });
+    }
+}
+
+// Todos los pasos de corrido (para leer el caso completo o buscar con Ctrl+F)
+function mostrarTodo() {
+    viendoTodo = true;
+    pasosFormulario.forEach(paso => paso.classList.remove('d-none'));
+    document.querySelectorAll('#indice-pasos .hv-paso-indice').forEach(boton => boton.classList.remove('activo'));
+    document.getElementById('nav-pasos').classList.add('d-none');
+    document.getElementById('btn-ver-todo').innerHTML = '<i class="bi bi-signpost-split me-1"></i>Ver por pasos';
+    if (MODO_FORMULARIO === 'ver') ajustarAlturasLectura(document.getElementById('formulario-caso'));
+}
+
+// Modo ver: los cuadros con texto crecen a su contenido (solo se puede medir cuando están visibles)
+function ajustarAlturasLectura(contenedor) {
+    contenedor.querySelectorAll('textarea').forEach(campo => {
+        if (campo.value.trim() !== '' && campo.offsetParent !== null) {
+            campo.style.height = 'auto';
+            campo.style.height = (campo.scrollHeight + 4) + 'px';
+        }
+    });
+}
 
 // Modo ver: el caso se lee como la plantilla. Se ocultan los apartados vacíos, los grupos y tablas
 // sin información, las guías de captura y las vistas previas; los cuadros con texto crecen a su contenido.
@@ -1879,12 +2054,7 @@ function prepararLecturaApartados() {
     ['btn-add-estadificacion', 'btn-add-farmacologico'].forEach(id => document.getElementById(id).classList.add('d-none'));
     document.querySelectorAll('.vista-previa-juego').forEach(detalle => detalle.classList.add('d-none'));
     document.querySelectorAll('textarea.apartado-historia + .form-text, textarea.apartado-exploracion + .form-text, textarea.apartado-laboratorios + .form-text, textarea.apartado-diagnostico + .form-text').forEach(guia => guia.classList.add('d-none'));
-    document.querySelectorAll('textarea.apartado-historia, textarea.apartado-exploracion, textarea.apartado-laboratorios, textarea.apartado-diagnostico, .bloque-formato-anterior textarea').forEach(campo => {
-        if (!vacio(campo) && campo.offsetParent !== null) {
-            campo.style.height = 'auto';
-            campo.style.height = (campo.scrollHeight + 4) + 'px';
-        }
-    });
+    // La altura de los cuadros con texto se ajusta al mostrar cada paso (ajustarAlturasLectura)
 }
 </script>
 

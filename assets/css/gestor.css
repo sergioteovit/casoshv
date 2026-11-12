@@ -552,3 +552,24 @@ section[id] { scroll-margin-top: 5.5rem; }
 /* Verificador: etiquetas de variables */
 .badge-variable { font-size: .75rem; margin: 2px; padding: 5px 8px; font-weight: 600; display: inline-block; }
 .col-variables { width: 30%; }
+
+/* Formulario de casos por pasos: índice lateral con el estado de cada paso */
+.hv-indice-pasos { position: sticky; top: 90px; }
+.hv-paso-indice {
+    display: flex; align-items: center; gap: .65rem; width: 100%; text-align: left;
+    border: 1px solid transparent; background: transparent; border-radius: .75rem;
+    padding: .5rem .65rem; margin-bottom: .2rem; color: var(--hv-texto); transition: background .15s, border-color .15s;
+}
+.hv-paso-indice:hover { background: rgba(var(--hv-morado-rgb), .06); }
+.hv-paso-indice.activo { background: var(--hv-morado-claro); border-color: rgba(var(--hv-morado-rgb), .3); }
+.hv-paso-numero {
+    flex: 0 0 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+    font-weight: 800; font-size: .9rem; background: #ece6f5; color: var(--hv-morado);
+}
+.hv-paso-indice[data-estado="progreso"] .hv-paso-numero { background: var(--hv-oro); color: var(--hv-morado-oscuro); }
+.hv-paso-indice[data-estado="completo"] .hv-paso-numero { background: var(--hv-turquesa); color: #fff; }
+.hv-paso-texto { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.hv-paso-titulo { font-weight: 700; font-size: .9rem; }
+.hv-paso-estado { font-size: .75rem; color: var(--hv-texto-suave); }
+.hv-paso-indice.activo .hv-paso-titulo { color: var(--hv-morado); }
+.paso-formulario > .section-title:first-of-type { margin-top: 0 !important; }

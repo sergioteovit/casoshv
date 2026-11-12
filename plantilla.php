@@ -7,7 +7,7 @@
 require_once __DIR__ . '/seguridad.php';
 
 // Subir este número al cambiar gestor.css para que los navegadores no usen la copia anterior
-define('GESTOR_VERSION_ESTILOS', '5');
+define('GESTOR_VERSION_ESTILOS', '6');
 
 if (!function_exists('h')) {
     function h($texto)
