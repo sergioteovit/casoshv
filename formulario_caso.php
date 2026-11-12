@@ -352,13 +352,36 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
         </div>
 
         <div class="mb-3">
-            <label for="historia" class="form-label fw-bold">Historia Clínica / Antecedentes:</label>
-            <textarea class="form-control" id="historia" name="historia" rows="3"></textarea>
+            <label for="hc_padecimiento_actual" class="form-label fw-bold">PADECIMIENTO ACTUAL:</label>
+            <textarea class="form-control apartado-historia" id="hc_padecimiento_actual" name="hc_padecimiento_actual" rows="3" data-titulo="Padecimiento actual"></textarea>
+            <div class="form-text">Solo si el resumen del caso no cubre algún aspecto del padecimiento (inicio, evolución, semiología).</div>
         </div>
 
-        <div class="mb-3">
-            <label for="exploracion" class="form-label fw-bold">Exploración física y Auscultación:</label>
-            <textarea class="form-control" id="exploracion" name="exploracion" rows="3"></textarea>
+        <!-- HISTORIA CLÍNICA (apartados de la plantilla; el texto de "historia" se arma con ellos al guardar) -->
+        <h2 class="section-title">HISTORIA CLÍNICA</h2>
+        <p class="text-muted small mb-3">Proporciona únicamente los antecedentes que modifican la probabilidad diagnóstica, la interpretación clínica o el manejo del paciente. Deja vacíos los apartados que no apliquen.</p>
+
+        <div class="mb-4 d-none bloque-formato-anterior" id="bloque-historia-anterior">
+            <label for="historia_texto_libre" class="form-label fw-bold"><i class="bi bi-clock-history me-1"></i> Historia clínica en texto libre (formato anterior):</label>
+            <textarea class="form-control" id="historia_texto_libre" name="historia_texto_libre" rows="6"></textarea>
+            <div class="form-text">Este caso se capturó antes de los apartados. Puedes pasar el texto a los apartados de abajo; lo que quede aquí se conserva al inicio de la historia clínica.</div>
+        </div>
+
+        <div id="apartados-historia"></div>
+
+        <!-- EXPLORACIÓN FÍSICA (el texto de "exploracion" se arma con los apartados al guardar) -->
+        <h2 class="section-title">EXPLORACIÓN FÍSICA</h2>
+
+        <div class="mb-4 d-none bloque-formato-anterior" id="bloque-exploracion-anterior">
+            <label for="exploracion_texto_libre" class="form-label fw-bold"><i class="bi bi-clock-history me-1"></i> Exploración física en texto libre (formato anterior):</label>
+            <textarea class="form-control" id="exploracion_texto_libre" name="exploracion_texto_libre" rows="6"></textarea>
+            <div class="form-text">Este caso se capturó antes de los apartados. Puedes pasar el texto a los apartados de abajo; lo que quede aquí se conserva al inicio de la exploración física.</div>
+        </div>
+
+        <div class="mb-4">
+            <label for="ef_aspecto_general" class="form-label fw-bold">ASPECTO GENERAL:</label>
+            <textarea class="form-control apartado-exploracion" id="ef_aspecto_general" name="ef_aspecto_general" rows="2" data-titulo="Aspecto general"></textarea>
+            <div class="form-text">Estado de conciencia, orientación, cooperación, facies, hidratación, coloración y marcha si aplica.</div>
         </div>
 
         <div class="mb-4">
@@ -420,7 +443,22 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
                     </div>
                 </div>
             </div>
+            <div class="form-text" id="texto-imc"></div>
         </div>
+
+        <label class="form-label fw-bold mb-2">EXPLORACIÓN SEGMENTARIA:</label>
+        <div id="apartados-exploracion"></div>
+
+        <details class="mb-4 border rounded p-3 bg-light" id="vista-previa-textos">
+            <summary class="fw-bold text-secondary"><i class="bi bi-eye me-1"></i> Ver el texto que se guardará para el juego (historia clínica y exploración física)</summary>
+            <label class="form-label small fw-bold text-muted mt-3">Historia clínica</label>
+            <textarea class="form-control form-control-sm mb-3" id="vista-previa-historia" rows="6" readonly></textarea>
+            <label class="form-label small fw-bold text-muted">Exploración física</label>
+            <textarea class="form-control form-control-sm" id="vista-previa-exploracion" rows="6" readonly></textarea>
+        </details>
+
+        <!-- ESTUDIOS, DIAGNÓSTICO Y TRATAMIENTO -->
+        <h2 class="section-title">ESTUDIOS, DIAGNÓSTICO Y TRATAMIENTO</h2>
 
         <div class="mb-3">
             <label for="laboratorios" class="form-label fw-bold">Laboratorios, Imágenes y otros exámenes:</label>
@@ -744,7 +782,180 @@ const MODO_FORMULARIO = <?= json_encode($modo) ?>;
 const idCasoEditar = <?= (int)$idCaso ?>;
 const datosPrecargados = <?= $modo === 'nuevo' ? '{}' : hv_json_para_script($jsonExistente) ?>;
 
+// =================================================================
+// APARTADOS DE LA HISTORIA CLÍNICA Y LA EXPLORACIÓN FÍSICA (plantilla para casos clínicos)
+// Cada apartado se guarda en su propia clave. Al guardar, "historia" y "exploracion" (las que lee
+// el juego) se arman con el texto libre del formato anterior y los apartados que tengan contenido.
+// [clave, título, guía]
+// =================================================================
+const APARTADOS_HISTORIA = [
+    { grupo: 'Antecedentes personales patológicos', apartados: [
+        ['hc_app', 'Antecedentes personales patológicos (APP)', 'Enfermedades crónicas relevantes; fecha aproximada de diagnóstico (si aporta valor); tratamiento actual; grado de control; complicaciones importantes.'],
+        ['hc_quirurgicos', 'Antecedentes quirúrgicos y transfusionales', 'Cirugías o transfusiones que puedan modificar el caso.'],
+        ['hc_hospitalizaciones', 'Hospitalizaciones previas', 'Solo las relevantes: hospitalización reciente, infecciones nosocomiales, reingresos, eventos cardiovasculares.'],
+        ['hc_medicamentos', 'Medicamentos habituales', 'Nombre del medicamento o terapéutica empleada; dosis (cuando sea relevante); adherencia al tratamiento.'],
+        ['hc_alergias', 'Alergias', 'A medicamentos, alimentos, látex o ninguna conocida.']
+    ]},
+    { grupo: 'Antecedentes heredofamiliares', apartados: [
+        ['hc_ahf', 'Antecedentes heredofamiliares (AHF)', 'Los que cambian el riesgo (DM, HAS, cáncer, cardiopatías, enfermedades autoinmunes) en abuelos, padres, tíos, cónyuge, hijos o primos. Investigar: diabetes mellitus, enfermedades tiroideas, hipertensión arterial, cardiopatías, nefropatías, enfermedades broncopulmonares, neurológicas, mentales, infectocontagiosas, reumáticas y neoplásicas.']
+    ]},
+    { grupo: 'Antecedentes personales no patológicos', apartados: [
+        ['hc_habitos', 'Hábitos', 'Solo los relevantes: tabaquismo, alcoholismo, uso de drogas, actividad física, alimentación, sueño, hábitos higiénico-dietéticos.'],
+        ['hc_habitacion', 'Habitación', 'Tipo de vivienda (jacal, departamento, vecindad, casa sola); distribución (cuartos, servicios, personas por habitación, convivencia con animales); higiene (iluminación, ventilación); baño intra o extradomiciliario, individual o compartido.'],
+        ['hc_epidemiologicos', 'Antecedentes epidemiológicos', 'Viajes recientes; contacto con personas enfermas; animales (zoonosis); alimentación; consumo de agua; ocupación; inmunizaciones; relaciones sexuales (cuando aplique); transfusiones; exposición laboral; contacto con vectores; estancia hospitalaria; antibióticos recientes.']
+    ]},
+    { grupo: 'Antecedentes ginecoobstétricos', sexo: 'Femenino', apartados: [
+        ['hc_ginecoobstetricos', 'Antecedentes ginecoobstétricos', 'Menarca; ciclo menstrual (frecuencia, duración, cantidad, dismenorrea); IVSA y número de parejas; gestas, partos, cesáreas, abortos; MAC; FUM; ITS; menopausia, climaterio; Papanicolaou; lactancia materna.']
+    ]},
+    { grupo: 'Interrogatorio por aparatos y sistemas', plegable: true, apartados: [
+        ['ias_respiratorio', 'Aparato respiratorio', 'Rinorrea, rinolalia, epistaxis, tos, expectoración, disfonía, hemoptisis, vómica, cianosis, dolor torácico, disnea y sibilancias audibles a distancia.'],
+        ['ias_digestivo', 'Aparato digestivo', 'Hambre, apetito, masticación y salivación, disfagia, halitosis, náusea, vómito, rumiación, regurgitación, pirosis, aerofagia, eructos, meteorismo, distensión abdominal, flatulencia, hematemesis, ictericia, características de las heces, diarrea, constipación, acolia, hipocolia, melena, rectorragia, parásitos, lientería, esteatorrea, pujo, tenesmo y prurito anal.'],
+        ['ias_cardiovascular', 'Aparato cardiovascular', 'Palpitaciones, dolor precordial, disnea de esfuerzo, disnea paroxística, apnea, cianosis, acúfenos, fosfenos, tinnitus, síncope, lipotimias y edema.'],
+        ['ias_renal_urinario', 'Aparato renal y urinario', 'Dolor renoureteral, disuria, anuria, oliguria, poliuria, polaquiuria, hematuria, piuria, coluria, urgencia, incontinencia, características del chorro, nictémero, goteo terminal y edema.'],
+        ['ias_genital_masculino', 'Aparato genital masculino', 'Libido, práctica sexual, número de parejas, priapismo, alteraciones de la erección y la eyaculación, secreción uretral, dolor testicular, alteraciones escrotales, sensación de cuerpo extraño en el periné e ITS.', 'Masculino'],
+        ['ias_genital_femenino', 'Aparato genital femenino', 'Leucorrea, hemorragias transvaginales, alteraciones menstruales, libido, práctica sexual, número de parejas, protección contra ITS, dispareunia, alteraciones sexuales, amenorrea y Papanicolaou.', 'Femenino'],
+        ['ias_endocrino', 'Sistema endocrino', 'Intolerancia al frío o al calor, hipo o hiperactividad, aumento de volumen del cuello, polidipsia, polifagia, poliuria, cambios en los caracteres sexuales secundarios, aumento o pérdida de peso.'],
+        ['ias_hematopoyetico', 'Sistema hematopoyético y linfático', 'Palidez, disnea, fatigabilidad, astenia, palpitaciones, sangrado, equimosis, petequias y adenomegalias.'],
+        ['ias_tegumentario', 'Sistema tegumentario', 'Coloración, pigmentación, prurito, características del pelo y las uñas, lesiones (primarias y secundarias), hiperhidrosis y xerodermia.'],
+        ['ias_musculoesqueletico', 'Sistema musculoesquelético', 'Mialgias, dolor óseo, artralgias, alteraciones de la marcha, hipotonía, disminución del volumen muscular, limitación de movimientos y deformidades.'],
+        ['ias_nervioso', 'Sistema nervioso', 'Cefalea, paresias, plejias, parálisis, parestesias, movimientos anormales (temblores, tics, corea), alteraciones de la marcha, vértigo y mareos.'],
+        ['ias_sentidos', 'Órganos de los sentidos', 'Alteraciones de la visión, la audición, el olfato, el gusto y el tacto; mareo y sensación de líquido en el oído.'],
+        ['ias_psiquica', 'Esfera psíquica', 'Tristeza, euforia, alteraciones del sueño, terrores nocturnos, ideaciones (alucinatorias, delirantes, obsesivas, suicidas), miedos exagerados, irritabilidad, apatía; relaciones personales.'],
+        ['ias_generales', 'Síntomas generales', 'Fiebre, astenia, adinamia, aumento o pérdida de peso y modificaciones del hambre (hiporexia, anorexia, hiperorexia).']
+    ]}
+];
+
+const APARTADOS_EXPLORACION = [
+    { grupo: 'Exploración segmentaria', apartados: [
+        ['ef_cabeza', 'Cabeza', 'Solo si aporta.'],
+        ['ef_cuello', 'Cuello', 'Solo si aporta.'],
+        ['ef_cardiovascular', 'Cardiovascular', 'Ruidos, soplos, pulsos, llenado capilar.'],
+        ['ef_respiratorio', 'Respiratorio', 'Inspección, palpación, percusión, auscultación.'],
+        ['ef_abdomen', 'Abdomen', 'Inspección, auscultación, percusión, palpación.'],
+        ['ef_extremidades', 'Extremidades', 'Edema, pulsos, fuerza, movilidad (derecha / izquierda).'],
+        ['ef_neurologico', 'Neurológico', 'Glasgow, pares craneales, sensibilidad, fuerza, reflejos, cerebelo.'],
+        ['ef_tegumentario', 'Tegumentario', 'Solo si aporta.']
+    ]},
+    { grupo: 'Hallazgos', apartados: [
+        ['ef_hallazgos_positivos', 'Hallazgos positivos', 'Hallazgos positivos relevantes para el diagnóstico.'],
+        ['ef_hallazgos_negativos', 'Hallazgos negativos', 'Hallazgos negativos relevantes para el diagnóstico.']
+    ]}
+];
+
+function hvEscaparHtml(texto) {
+    const div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML;
+}
+
+// Dibuja los apartados en el contenedor. Los grupos "plegables" se muestran cerrados (se abren solos si tienen texto).
+function construirApartados(idContenedor, grupos, clase) {
+    const contenedor = document.getElementById(idContenedor);
+    grupos.forEach(grupo => {
+        const bloque = document.createElement('div');
+        bloque.className = 'mb-4 grupo-apartados';
+        if (grupo.sexo) bloque.dataset.sexo = grupo.sexo;
+        let html = grupos.length > 1 || grupo.plegable ? `<h6 class="fw-bold text-secondary mb-2">${hvEscaparHtml(grupo.grupo)}</h6>` : '';
+        grupo.apartados.forEach(([clave, titulo, guia, sexo]) => {
+            const campo = `<textarea class="form-control ${clase}" id="${clave}" name="${clave}" rows="2" data-titulo="${hvEscaparHtml(titulo)}"></textarea>`
+                        + `<div class="form-text">${hvEscaparHtml(guia)}</div>`;
+            const atributoSexo = sexo ? ` data-sexo="${sexo}"` : '';
+            if (grupo.plegable) {
+                html += `<details class="border rounded px-3 py-2 mb-2 apartado-plegable"${atributoSexo}>`
+                      + `<summary class="fw-bold">${hvEscaparHtml(titulo)} <span class="badge rounded-pill bg-success ms-2 d-none indicador-contenido">con información</span></summary>`
+                      + `<div class="pt-2">${campo}</div></details>`;
+            } else {
+                html += `<div class="mb-3"${atributoSexo}><label for="${clave}" class="form-label small fw-bold">${hvEscaparHtml(titulo)}</label>${campo}</div>`;
+            }
+        });
+        bloque.innerHTML = html;
+        contenedor.appendChild(bloque);
+    });
+}
+
+// Texto "Título: contenido" de los apartados con información, separados por una línea en blanco
+function armarTextoApartados(clase) {
+    return Array.from(document.querySelectorAll('textarea.' + clase))
+        .filter(campo => campo.value.trim() !== '')
+        .map(campo => campo.dataset.titulo + ': ' + campo.value.trim())
+        .join('\n\n');
+}
+
+function valorCampo(nombre) {
+    const campo = document.querySelector(`[name="${nombre}"]`);
+    return campo ? campo.value.trim() : '';
+}
+
+// Línea de signos vitales y somatometría para la exploración física armada
+function lineaSignosVitales() {
+    const partes = [];
+    const agregar = (nombre, prefijo, unidad) => { const v = valorCampo(nombre); if (v) partes.push(prefijo + ' ' + v + (unidad ? ' ' + unidad : '')); };
+    agregar('signos_ta', 'TA', 'mmHg');
+    agregar('signos_fc', 'FC', 'lpm');
+    agregar('signos_fr', 'FR', 'rpm');
+    agregar('signos_temp', 'Temperatura', '°C');
+    agregar('signos_sato2', 'SatO2', '%');
+    agregar('somatometria_peso', 'Peso', 'kg');
+    agregar('somatometria_talla', 'Talla', 'cm');
+    const imc = calcularImc();
+    if (imc) partes.push('IMC ' + imc + ' kg/m²');
+    return partes.length ? 'Signos vitales y somatometría: ' + partes.join(', ') + '.' : '';
+}
+
+function calcularImc() {
+    const peso = parseFloat(valorCampo('somatometria_peso'));
+    const tallaCm = parseFloat(valorCampo('somatometria_talla'));
+    if (!(peso > 0) || !(tallaCm > 0)) return '';
+    return (peso / Math.pow(tallaCm / 100, 2)).toFixed(1);
+}
+
+// Textos que se guardan en "historia" y "exploracion". Si ningún apartado tiene información,
+// queda solo el texto libre del formato anterior (así un caso anterior se guarda sin cambios).
+function armarHistoria() {
+    const apartados = armarTextoApartados('apartado-historia');
+    const libre = document.getElementById('historia_texto_libre').value;
+    if (apartados === '') return libre; // sin apartados, el texto anterior se guarda exactamente igual
+    return [libre.trim(), apartados].filter(t => t !== '').join('\n\n');
+}
+
+function armarExploracion() {
+    const apartados = armarTextoApartados('apartado-exploracion');
+    let armado = '';
+    if (apartados !== '') {
+        // El aspecto general va primero, luego los signos vitales y después la exploración segmentaria
+        const aspecto = valorCampo('ef_aspecto_general');
+        const resto = Array.from(document.querySelectorAll('textarea.apartado-exploracion'))
+            .filter(campo => campo.name !== 'ef_aspecto_general' && campo.value.trim() !== '')
+            .map(campo => campo.dataset.titulo + ': ' + campo.value.trim());
+        armado = [aspecto ? 'Aspecto general: ' + aspecto : '', lineaSignosVitales(), ...resto].filter(t => t !== '').join('\n\n');
+    }
+    const libre = document.getElementById('exploracion_texto_libre').value;
+    if (armado === '') return libre; // sin apartados, el texto anterior se guarda exactamente igual
+    return [libre.trim(), armado].filter(t => t !== '').join('\n\n');
+}
+
+// Estado visual: apartados plegables abiertos o marcados si tienen texto, apartados según el sexo,
+// IMC y vista previa de los textos armados
+function actualizarApartados() {
+    document.querySelectorAll('details.apartado-plegable').forEach(detalle => {
+        const tieneTexto = detalle.querySelector('textarea').value.trim() !== '';
+        detalle.querySelector('.indicador-contenido').classList.toggle('d-none', !tieneTexto);
+    });
+    const sexo = (document.querySelector('input[name="sexo"]:checked') || {}).value || '';
+    document.querySelectorAll('#formulario-caso [data-sexo]').forEach(elemento => {
+        const tieneTexto = Array.from(elemento.querySelectorAll('textarea')).some(t => t.value.trim() !== '');
+        elemento.classList.toggle('d-none', sexo !== '' && sexo !== elemento.dataset.sexo && !tieneTexto);
+    });
+    const imc = calcularImc();
+    document.getElementById('texto-imc').textContent = imc ? 'IMC calculado: ' + imc + ' kg/m²' : '';
+    document.getElementById('vista-previa-historia').value = armarHistoria();
+    document.getElementById('vista-previa-exploracion').value = armarExploracion();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+
+    construirApartados('apartados-historia', APARTADOS_HISTORIA, 'apartado-historia');
+    construirApartados('apartados-exploracion', APARTADOS_EXPLORACION, 'apartado-exploracion');
 
     // Contadores para asegurar names únicos
     let contadorPreguntas = 1;
@@ -1143,6 +1354,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Textos que lee el juego, armados con el texto libre del formato anterior y los apartados
+        datosDelCaso.historia = armarHistoria();
+        datosDelCaso.exploracion = armarExploracion();
+
         // Claves guardadas que el formulario ya no muestra (p. ej. el ART, que ahora se califica en el juego):
         // se conservan tal cual para no perder datos al editar. Las que el formulario maneja (aunque el autor
         // las haya vaciado o quitado) no se recuperan.
@@ -1415,6 +1630,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             }
     }
+
+    // Formato anterior: si el caso no tiene todavía la clave del texto libre, su "historia" y su "exploracion"
+    // guardadas pasan al cuadro de texto libre (los apartados nuevos empiezan vacíos)
+    [['historia', 'historia_texto_libre', 'bloque-historia-anterior'],
+     ['exploracion', 'exploracion_texto_libre', 'bloque-exploracion-anterior']].forEach(([claveJuego, claveLibre, idBloque]) => {
+        const campoLibre = document.getElementById(claveLibre);
+        if (!(claveLibre in datosPrecargados) && typeof datosPrecargados[claveJuego] === 'string') {
+            campoLibre.value = datosPrecargados[claveJuego];
+        }
+        document.getElementById(idBloque).classList.toggle('d-none', campoLibre.value.trim() === '');
+    });
+
+    // Apartados plegables con información: abiertos al cargar
+    document.querySelectorAll('details.apartado-plegable').forEach(detalle => {
+        if (detalle.querySelector('textarea').value.trim() !== '') detalle.open = true;
+    });
+    actualizarApartados();
+    formulario.addEventListener('input', actualizarApartados);
+    formulario.addEventListener('change', actualizarApartados);
 
     // Con el caso ya cargado, se arma la lista del diagnóstico correcto con el valor guardado
     sincronizarSelector();
