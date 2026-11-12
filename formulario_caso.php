@@ -361,6 +361,67 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             <textarea class="form-control" id="exploracion" name="exploracion" rows="3"></textarea>
         </div>
 
+        <div class="mb-4">
+            <label class="form-label fw-bold mb-3">SIGNOS VITALES:</label>
+            <div class="row g-3">
+                <div class="col-sm-6 col-md-4 col-lg">
+                    <label class="form-label small fw-bold text-muted">Tensión Arterial (mmHg)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-heart-pulse text-danger"></i></span>
+                        <input type="text" class="form-control" name="signos_ta" placeholder="Ej. 120/80">
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4 col-lg">
+                    <label class="form-label small fw-bold text-muted">Frec. Cardiaca (lpm)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-activity text-danger"></i></span>
+                        <input type="number" class="form-control" name="signos_fc" placeholder="Ej. 80">
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4 col-lg">
+                    <label class="form-label small fw-bold text-muted">Frec. Respiratoria (rpm)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-lungs text-info"></i></span>
+                        <input type="number" class="form-control" name="signos_fr" placeholder="Ej. 16">
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg">
+                    <label class="form-label small fw-bold text-muted">Temperatura (°C)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-thermometer-half text-warning"></i></span>
+                        <input type="number" step="0.1" class="form-control" name="signos_temp" placeholder="Ej. 36.5">
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-6 col-lg">
+                    <label class="form-label small fw-bold text-muted">Sat. de Oxígeno (%)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-droplet-fill text-primary"></i></span>
+                        <input type="number" min="0" max="100" class="form-control" name="signos_sato2" placeholder="Ej. 98">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold mb-3">SOMATOMETRÍA:</label>
+            <div class="row g-3">
+                <div class="col-sm-6 col-md-6">
+                    <label class="form-label small fw-bold text-muted">Peso (kg)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-person-fill text-secondary"></i></span>
+                        <input type="number" step="0.1" class="form-control" name="somatometria_peso" placeholder="Ej. 70.5">
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-6">
+                    <label class="form-label small fw-bold text-muted">Talla (cm)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-rulers text-secondary"></i></span>
+                        <input type="number" step="0.1" class="form-control" name="somatometria_talla" placeholder="Ej. 175">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="mb-3">
             <label for="laboratorios" class="form-label fw-bold">Laboratorios, Imágenes y otros exámenes:</label>
             <textarea class="form-control mb-2" id="laboratorios" name="laboratorios" rows="3" placeholder="Describe los hallazgos principales de laboratorio o gabinete..."></textarea>
@@ -501,21 +562,16 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             <i class="bi bi-patch-question me-1"></i> Agregar otra pregunta
         </button>
 
-        <!-- MATERIAL Y COMPLEMENTOS -->
-        <h2 class="section-title">MATERIAL COMPLEMENTARIO Y EXTRAS</h2>
-        
-        <div class="mb-3">
-            <label class="form-label fw-bold">Material que complementa el caso (Enlaces o Referencias):</label>
-            <div id="enlaces-container">
-                <div class="input-group mb-2 enlace-input-group">
-                    <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
-                    <input type="text" class="form-control" name="enlaces_material" placeholder="Ej. https://... o referencia bibliográfica">
-                    <button class="btn btn-outline-danger btn-remove" type="button" title="Eliminar enlace"><i class="bi bi-trash btn-remove"></i></button>
-                </div>
+
+        <!-- NOTA MÉDICA Y TABLA SOAP -->
+        <h2 class="section-title">NOTA MÉDICA Y TABLA SOAP</h2>
+
+        <div class="mb-4">
+            <label for="nota_medica" class="form-label fw-bold">NOTA MÉDICA:</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-file-earmark-medical text-primary"></i></span>
+                <textarea class="form-control" id="nota_medica" name="nota_medica" rows="4" placeholder="Redacte la nota médica (ingreso, evolución, indicaciones, etc.)..."></textarea>
             </div>
-            <button type="button" id="btn-add-enlace" class="btn btn-sm btn-outline-primary mt-1">
-                <i class="bi bi-plus-circle me-1"></i> Agregar otro enlace
-            </button>
         </div>
 
         <div class="mb-4">
@@ -552,66 +608,8 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             </div>
         </div>
 
-        <div class="mb-4">
-            <label class="form-label fw-bold mb-3">SIGNOS VITALES:</label>
-            <div class="row g-3">
-                <div class="col-sm-6 col-md-4 col-lg">
-                    <label class="form-label small fw-bold text-muted">Tensión Arterial (mmHg)</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-heart-pulse text-danger"></i></span>
-                        <input type="text" class="form-control" name="signos_ta" placeholder="Ej. 120/80">
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-4 col-lg">
-                    <label class="form-label small fw-bold text-muted">Frec. Cardiaca (lpm)</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-activity text-danger"></i></span>
-                        <input type="number" class="form-control" name="signos_fc" placeholder="Ej. 80">
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-4 col-lg">
-                    <label class="form-label small fw-bold text-muted">Frec. Respiratoria (rpm)</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-lungs text-info"></i></span>
-                        <input type="number" class="form-control" name="signos_fr" placeholder="Ej. 16">
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-6 col-lg">
-                    <label class="form-label small fw-bold text-muted">Temperatura (°C)</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-thermometer-half text-warning"></i></span>
-                        <input type="number" step="0.1" class="form-control" name="signos_temp" placeholder="Ej. 36.5">
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-6 col-lg">
-                    <label class="form-label small fw-bold text-muted">Sat. de Oxígeno (%)</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-droplet-fill text-primary"></i></span>
-                        <input type="number" min="0" max="100" class="form-control" name="signos_sato2" placeholder="Ej. 98">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mb-4">
-            <label class="form-label fw-bold mb-3">SOMATOMETRÍA:</label>
-            <div class="row g-3">
-                <div class="col-sm-6 col-md-6">
-                    <label class="form-label small fw-bold text-muted">Peso (kg)</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-person-fill text-secondary"></i></span>
-                        <input type="number" step="0.1" class="form-control" name="somatometria_peso" placeholder="Ej. 70.5">
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-6">
-                    <label class="form-label small fw-bold text-muted">Talla (cm)</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-rulers text-secondary"></i></span>
-                        <input type="number" step="0.1" class="form-control" name="somatometria_talla" placeholder="Ej. 175">
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- PACIENTE VIRTUAL (JUEGO) -->
+        <h2 class="section-title">PACIENTE VIRTUAL (JUEGO) <i class="bi bi-person-video ms-2 text-primary"></i></h2>
 
         <div class="mb-4">
             <label for="prompts" class="form-label fw-bold">PROMPTS DE IA:</label>
@@ -640,16 +638,34 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
         </div>
 
         <div class="mb-4">
-            <label for="nota_medica" class="form-label fw-bold">NOTA MÉDICA:</label>
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-file-earmark-medical text-primary"></i></span>
-                <textarea class="form-control" id="nota_medica" name="nota_medica" rows="4" placeholder="Redacte la nota médica (ingreso, evolución, indicaciones, etc.)..."></textarea>
+            <label class="form-label fw-bold">Preguntas para la entrevista al paciente virtual:</label>
+            <div id="simulacion-preguntas-container">
+                <div class="input-group mb-2 simulacion-input-group">
+                    <span class="input-group-text"><i class="bi bi-question-circle"></i></span>
+                    <input type="text" class="form-control" name="simulacion_preguntas" placeholder="Escribe una pregunta para la entrevista al paciente virtual...">
+                    <button class="btn btn-outline-danger btn-remove" type="button" title="Eliminar pregunta"><i class="bi bi-trash btn-remove"></i></button>
+                </div>
             </div>
+            <button type="button" id="btn-add-simulacion-pregunta" class="btn btn-sm btn-outline-primary mt-1">
+                <i class="bi bi-plus-circle me-1"></i> Agregar otra pregunta
+            </button>
         </div>
 
-        <!-- SEMIOLOGÍA MÉDICA GENERADA POR IA -->
-        <h2 class="section-title">SEMIOLOGÍA MÉDICA GENERADA POR IA <i class="bi bi-robot ms-2 text-primary"></i></h2>
-        
+        <div class="mb-4">
+            <label class="form-label fw-bold">Preguntas del evaluador al médico para la metacognición:</label>
+            <div id="metacognicion-preguntas-container">
+                <div class="input-group mb-2 metacognicion-input-group">
+                    <span class="input-group-text"><i class="bi bi-lightbulb text-warning"></i></span>
+                    <input type="text" class="form-control" name="metacognicion_preguntas" placeholder="Escribe una pregunta de metacognición...">
+                    <button class="btn btn-outline-danger btn-remove" type="button" title="Eliminar pregunta"><i class="bi bi-trash btn-remove"></i></button>
+                </div>
+            </div>
+            <button type="button" id="btn-add-metacognicion-pregunta" class="btn btn-sm btn-outline-primary mt-1">
+                <i class="bi bi-plus-circle me-1"></i> Agregar otra pregunta
+            </button>
+        </div>
+
+        <label class="form-label fw-bold mb-3"><i class="bi bi-robot me-1"></i> SEMIOLOGÍA MÉDICA GENERADA POR IA:</label>
         <div class="row g-3 mb-4">
             <!-- Anamnesis -->
             <div class="col-md-6">
@@ -681,214 +697,21 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             </div>
         </div>
 
-        <!-- SIMULACIÓN -->
-        <h2 class="section-title">SIMULACIÓN <i class="bi bi-person-video ms-2 text-primary"></i></h2>
-        
-        <div class="mb-4">
-            <label class="form-label fw-bold">Preguntas para la entrevista al paciente virtual:</label>
-            <div id="simulacion-preguntas-container">
-                <div class="input-group mb-2 simulacion-input-group">
-                    <span class="input-group-text"><i class="bi bi-question-circle"></i></span>
-                    <input type="text" class="form-control" name="simulacion_preguntas" placeholder="Escribe una pregunta para la entrevista al paciente virtual...">
-                    <button class="btn btn-outline-danger btn-remove" type="button" title="Eliminar pregunta"><i class="bi bi-trash btn-remove"></i></button>
+        <!-- MATERIAL COMPLEMENTARIO -->
+        <h2 class="section-title">MATERIAL COMPLEMENTARIO</h2>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Material que complementa el caso (Enlaces o Referencias):</label>
+            <div id="enlaces-container">
+                <div class="input-group mb-2 enlace-input-group">
+                    <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+                    <input type="text" class="form-control" name="enlaces_material" placeholder="Ej. https://... o referencia bibliográfica">
+                    <button class="btn btn-outline-danger btn-remove" type="button" title="Eliminar enlace"><i class="bi bi-trash btn-remove"></i></button>
                 </div>
             </div>
-            <button type="button" id="btn-add-simulacion-pregunta" class="btn btn-sm btn-outline-primary mt-1">
-                <i class="bi bi-plus-circle me-1"></i> Agregar otra pregunta
+            <button type="button" id="btn-add-enlace" class="btn btn-sm btn-outline-primary mt-1">
+                <i class="bi bi-plus-circle me-1"></i> Agregar otro enlace
             </button>
-        </div>
-
-        <div class="mb-4">
-            <label class="form-label fw-bold">Preguntas del evaluador al médico para la metacognición:</label>
-            <div id="metacognicion-preguntas-container">
-                <div class="input-group mb-2 metacognicion-input-group">
-                    <span class="input-group-text"><i class="bi bi-lightbulb text-warning"></i></span>
-                    <input type="text" class="form-control" name="metacognicion_preguntas" placeholder="Escribe una pregunta de metacognición...">
-                    <button class="btn btn-outline-danger btn-remove" type="button" title="Eliminar pregunta"><i class="bi bi-trash btn-remove"></i></button>
-                </div>
-            </div>
-            <button type="button" id="btn-add-metacognicion-pregunta" class="btn btn-sm btn-outline-primary mt-1">
-                <i class="bi bi-plus-circle me-1"></i> Agregar otra pregunta
-            </button>
-        </div>
-        
-        <!-- INSTRUMENTO ART_es -->
-        <h2 class="section-title mt-5">INSTRUMENTO Assessment of Reasoning Tool – Reconstructed Versión en español adaptada (ART_es) <i class="bi bi-clipboard2-data ms-2 text-primary"></i></h2>
-        <p class="text-muted mb-4">Complete los campos de evaluación (1 al 5) para cada ítem de las diferentes dimensiones.</p>
-        
-        <!-- DIMENSIÓN 1 -->
-        <div class="mb-4 p-4 border rounded bg-light">
-            <h4 class="fw-bold text-primary mb-3">DIMENSIÓN 1: Recolección de información dirigida por hipótesis</h4>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 1</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i1_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i1_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i1_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i1_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i1_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 2</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i2_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i2_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i2_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i2_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i2_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-0 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 3</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i3_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i3_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i3_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i3_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d1_i3_5" rows="2"></textarea></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- DIMENSIÓN 2 -->
-        <div class="mb-4 p-4 border rounded bg-light">
-            <h4 class="fw-bold text-primary mb-3">DIMENSIÓN 2: Representación del problema</h4>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 1</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i1_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i1_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i1_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i1_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i1_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 2</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i2_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i2_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i2_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i2_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i2_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-0 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 3</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i3_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i3_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i3_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i3_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d2_i3_5" rows="2"></textarea></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- DIMENSIÓN 3 -->
-        <div class="mb-4 p-4 border rounded bg-light">
-            <h4 class="fw-bold text-primary mb-3">DIMENSIÓN 3: Diagnóstico diferencial priorizado</h4>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 1</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i1_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i1_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i1_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i1_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i1_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 2</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i2_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i2_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i2_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i2_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i2_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-0 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 3</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i3_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i3_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i3_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i3_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d3_i3_5" rows="2"></textarea></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- DIMENSIÓN 4 -->
-        <div class="mb-4 p-4 border rounded bg-light">
-            <h4 class="fw-bold text-primary mb-3">DIMENSIÓN 4: Evaluación diagnóstica</h4>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 1</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i1_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i1_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i1_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i1_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i1_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 2</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i2_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i2_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i2_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i2_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i2_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-0 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 3</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i3_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i3_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i3_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i3_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d4_i3_5" rows="2"></textarea></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- DIMENSIÓN 5 -->
-        <div class="mb-4 p-4 border rounded bg-light">
-            <h4 class="fw-bold text-primary mb-3">DIMENSIÓN 5: Conciencia de tendencias cognitivas y factores emocionales</h4>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 1</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i1_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i1_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i1_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i1_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i1_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-3 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 2</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i2_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i2_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i2_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i2_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i2_5" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="bg-white p-3 border rounded mb-0 shadow-sm art-item-container">
-                <h5 class="fw-bold mb-2 text-secondary">Item 3</h5>
-                <div class="row g-2">
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">1</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i3_1" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">2</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i3_2" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">3</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i3_3" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">4</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i3_4" rows="2"></textarea></div>
-                    <div class="col-12 col-sm-6 col-md flex-grow-1"><label class="form-label fw-bold small text-muted">5</label><textarea class="form-control form-control-sm border-primary" name="art_d5_i3_5" rows="2"></textarea></div>
-                </div>
-            </div>
         </div>
 
         <div class="hv-barra-guardar mt-5">
@@ -1317,6 +1140,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     datosDelCaso[key] = value;
                 }
+            }
+        }
+
+        // Claves guardadas que el formulario ya no muestra (p. ej. el ART, que ahora se califica en el juego):
+        // se conservan tal cual para no perder datos al editar. Las que el formulario maneja (aunque el autor
+        // las haya vaciado o quitado) no se recuperan.
+        if (!esNuevo) {
+            const camposDelFormulario = new Set(Array.from(formulario.elements).map(el => el.name).filter(Boolean));
+            ['autores', 'enlaces_material', 'simulacion_preguntas', 'metacognicion_preguntas',
+             'departamentos', 'departamentos_19', 'sistemas_anatomicos', 'asignaturas',
+             'archivos_adjuntos', 'archivos_adjuntos_previos'].forEach(c => camposDelFormulario.add(c));
+            const camposDinamicos = /^(diag_dif_|pregunta_\d+$|p\d+_)/;
+            for (const clave in datosPrecargados) {
+                if (camposDelFormulario.has(clave) || camposDinamicos.test(clave) || clave in datosDelCaso) continue;
+                datosDelCaso[clave] = datosPrecargados[clave];
             }
         }
 
