@@ -34,40 +34,33 @@ if ($rolActual !== 'Invitado') {
     header('Location: lista_casos.php');
     exit;
 }
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cuenta pendiente de aprobación</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        body { background-color: #f4f7f6; display: flex; align-items: center; min-height: 100vh; }
-        .login-card { max-width: 460px; width: 100%; margin: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-    </style>
-</head>
-<body>
 
-<div class="container">
-    <div class="card login-card border-0">
-        <div class="card-body p-5 text-center">
-            <i class="bi bi-hourglass-split text-primary" style="font-size: 3rem;"></i>
-            <h4 class="mt-2 fw-bold">Cuenta pendiente de aprobación</h4>
-            <p class="text-muted">
-                Hola, <?= htmlspecialchars($_SESSION['nombre_completo'] ?? $_SESSION['usuario'] ?? '') ?>.
-                Tu cuenta ya está creada, pero un administrador debe asignarte un rol antes de que puedas ver los casos clínicos.
-            </p>
-            <p class="text-muted small">Cuando te avisen que tu cuenta está activa, pulsa "Comprobar de nuevo".</p>
-            <div class="d-grid gap-2 mt-4">
-                <a href="cuenta_pendiente.php" class="btn btn-primary fw-bold"><i class="bi bi-arrow-clockwise me-1"></i> Comprobar de nuevo</a>
-                <a href="perfil.php" class="btn btn-outline-secondary">Mi perfil</a>
-                <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-outline-danger">Salir</a>
-            </div>
+require_once __DIR__ . '/plantilla.php';
+
+hv_acceso_inicio(
+    'Cuenta pendiente',
+    'Tu cuenta ya está creada',
+    'Mientras un administrador la revisa, no se muestran los casos clínicos. En cuanto te asigne un rol podrás entrar.',
+    'assets/img/portada-heroe.png',
+    'Dos docentes de medicina diseñan un caso clínico'
+);
+?>
+<div class="text-center">
+    <img class="hv-figura-espera img-fluid mb-3" src="assets/img/mascota-espera.png" alt="Robot mascota con un reloj de arena">
+    <h2 class="h4 mb-2">Cuenta pendiente de aprobación</h2>
+    <p class="text-muted">
+        Hola, <strong><?= h($_SESSION['nombre_completo'] ?? $_SESSION['usuario'] ?? '') ?></strong>.
+        Un administrador debe asignarte un rol antes de que puedas ver los casos clínicos.
+    </p>
+    <p class="text-muted small mb-4">Cuando te avisen que tu cuenta está activa, pulsa "Comprobar de nuevo".</p>
+    <div class="d-grid gap-2">
+        <a href="cuenta_pendiente.php" class="btn btn-primary btn-lg"><i class="bi bi-arrow-clockwise me-1"></i>Comprobar de nuevo</a>
+        <div class="d-flex gap-2">
+            <a href="perfil.php" class="btn btn-outline-primary flex-fill"><i class="bi bi-person-gear me-1"></i>Mi perfil</a>
+            <a href="logout.php?csrf=<?= h(hv_token_csrf()) ?>" class="btn btn-outline-danger flex-fill"><i class="bi bi-box-arrow-right me-1"></i>Salir</a>
         </div>
     </div>
 </div>
-
+<?php hv_acceso_fin(); ?>
 </body>
 </html>

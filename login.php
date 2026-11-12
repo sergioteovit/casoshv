@@ -12,107 +12,70 @@ if (isset($_SESSION['usuario_id'])) {
 $num1 = rand(1, 9);
 $num2 = rand(1, 9);
 $_SESSION['captcha_resultado'] = $num1 + $num2;
+
+require_once __DIR__ . '/plantilla.php';
+
+$mensajesError = [
+    'captcha'  => 'El resultado de la verificación matemática es incorrecto.',
+    'intentos' => 'Demasiados intentos. Espera 15 minutos e inténtalo de nuevo.',
+];
+$error = isset($_GET['error']) ? ($mensajesError[$_GET['error']] ?? 'Usuario o contraseña incorrectos.') : null;
+
+hv_acceso_inicio(
+    'Iniciar sesión',
+    '¡Qué bueno verte de nuevo!',
+    'Entra para elaborar, revisar y enriquecer los casos clínicos que se juegan en Hospital Virtual.',
+    'assets/img/ilustracion-acceso.png',
+    'Médico docente con una carpeta clínica y un holograma de una lista de verificación'
+);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso al Sistema de Casos Clínicos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        body { background-color: #f4f7f6; display: flex; align-items: center; height: 100vh; }
-        .login-card { max-width: 400px; width: 100%; margin: auto; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .btn-toggle-password { cursor: pointer; }
-    </style>
-</head>
-<body>
+<h2 class="h4 mb-1">Iniciar sesión</h2>
+<p class="text-muted mb-4">Usa tu cuenta del gestor de casos.</p>
 
-<div class="container">
-    <div class="card login-card border-0">
-        <div class="card-body p-5">
-            <div class="text-center mb-4">
-                <i class="bi bi-heart-pulse-fill text-primary" style="font-size: 3rem;"></i>
-                <h4 class="mt-2 fw-bold">Casos Clínicos</h4>
-                <p class="text-muted small">Inicie sesión para continuar</p>
-            </div>
+<?php if ($error !== null): ?>
+    <div class="alert alert-danger small py-2"><i class="bi bi-exclamation-triangle me-1"></i><?= h($error) ?></div>
+<?php endif; ?>
+<?php if (isset($_GET['msg']) && $_GET['msg'] === 'registrado'): ?>
+    <div class="alert alert-success small py-2">
+        <i class="bi bi-check-circle me-1"></i>¡Cuenta creada con éxito! Un administrador debe activarla antes de que puedas ver los casos.
+    </div>
+<?php endif; ?>
 
-            <?php if(isset($_GET['error'])): ?>
-                <div class="alert alert-danger small py-2 text-center">
-                    <?php 
-                        if($_GET['error'] == 'captcha') echo "El resultado de la verificación matemática es incorrecto.";
-                        elseif($_GET['error'] == 'intentos') echo "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo.";
-                        else echo "Usuario o contraseña incorrectos.";
-                    ?>
-                </div>
-            <?php endif; ?>
-            
-            <?php if(isset($_GET['msg']) && $_GET['msg'] == 'registrado'): ?>
-                <div class="alert alert-success small py-2 text-center">
-                    ¡Cuenta creada con éxito! Un administrador debe activarla antes de que puedas ver los casos.
-                </div>
-            <?php endif; ?>
-
-            <form action="procesar_login.php" method="POST" id="loginForm">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Usuario</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-person"></i></span>
-                        <input type="text" name="usuario" id="inputUsuario" class="form-control" required>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Contraseña</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                        <input type="password" name="password" id="inputPassword" class="form-control" required>
-                        <button class="btn btn-outline-secondary btn-toggle-password" type="button" id="btnTogglePassword" title="Mostrar contraseña">
-                            <i class="bi bi-eye" id="eyeIcon"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="form-label small fw-bold">Verificación: ¿Cuánto es <?= $num1 ?> + <?= $num2 ?>?</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-shield-check"></i></span>
-                        <input type="number" name="captcha" class="form-control" placeholder="Escriba el resultado" required>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100 fw-bold">Ingresar</button>
-                <div class="text-center mt-4">
-                    <span class="small text-muted">¿No tienes cuenta?</span>
-                    <a href="registro.php" class="small fw-bold text-decoration-none text-primary">Regístrate aquí</a>
-                </div>
-            </form>
-
+<form action="procesar_login.php" method="POST" id="loginForm">
+    <div class="mb-3">
+        <label class="form-label fw-bold small" for="inputUsuario">Usuario</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            <input type="text" name="usuario" id="inputUsuario" class="form-control" autocomplete="username" required autofocus>
         </div>
     </div>
-</div>
 
-<script>
-    // --- Lógica para mostrar/ocultar la contraseña ---
-    const btnTogglePassword = document.getElementById('btnTogglePassword');
-    const inputPassword = document.getElementById('inputPassword');
-    const eyeIcon = document.getElementById('eyeIcon');
+    <div class="mb-3">
+        <label class="form-label fw-bold small" for="inputPassword">Contraseña</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input type="password" name="password" id="inputPassword" class="form-control" autocomplete="current-password" required>
+            <button class="btn btn-outline-secondary" type="button" data-mostrar="inputPassword" title="Mostrar contraseña" aria-label="Mostrar u ocultar la contraseña">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+    </div>
 
-    btnTogglePassword.addEventListener('click', function() {
-        if (inputPassword.type === 'password') {
-            inputPassword.type = 'text';
-            eyeIcon.classList.remove('bi-eye');
-            eyeIcon.classList.add('bi-eye-slash');
-            this.title = "Ocultar contraseña";
-        } else {
-            inputPassword.type = 'password';
-            eyeIcon.classList.remove('bi-eye-slash');
-            eyeIcon.classList.add('bi-eye');
-            this.title = "Mostrar contraseña";
-        }
-    });
-</script>
+    <div class="mb-4">
+        <label class="form-label fw-bold small" for="inputCaptcha">Verificación: ¿cuánto es <span class="hv-captcha"><?= $num1 ?> + <?= $num2 ?></span>?</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-shield-check"></i></span>
+            <input type="number" name="captcha" id="inputCaptcha" class="form-control" placeholder="Escribe el resultado" required>
+        </div>
+    </div>
 
+    <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-box-arrow-in-right me-1"></i>Entrar</button>
+
+    <div class="d-flex flex-wrap justify-content-between gap-2 mt-3 small">
+        <a href="registro.php" class="fw-bold">¿No tienes cuenta? Regístrate</a>
+        <span class="text-muted">¿Olvidaste tu contraseña? Pide a un administrador que la restablezca.</span>
+    </div>
+</form>
+<?php hv_acceso_fin(); ?>
 </body>
 </html>

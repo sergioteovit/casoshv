@@ -16,3 +16,5 @@ game/assets/img/*
 # Archivos adjuntos de los casos (están en el servidor): solo se versiona la regla que bloquea el acceso web
 uploads/*
 !uploads/.htaccess
+# Gestor de casos: los originales de las imágenes (grandes) se quedan en la computadora; solo se versionan las copias web
+assets/img/originales/
