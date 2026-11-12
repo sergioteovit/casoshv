@@ -41,128 +41,41 @@ if ($modo !== 'nuevo') {
     }
 }
 
+require_once __DIR__ . '/plantilla.php';
+
+// Título del caso guardado (editar y ver), para la franja de título
+$datosCabecera = json_decode((string)$jsonExistente, true);
+$tituloCaso = is_array($datosCabecera) ? trim((string)($datosCabecera['titulo_caso'] ?? '')) : '';
+$identificadorCaso = is_array($datosCabecera) ? trim((string)($datosCabecera['identificador'] ?? '')) : '';
+
 $titulosPagina = ['nuevo' => 'Nuevo caso clínico', 'editar' => 'Editar caso clínico', 'ver' => 'Caso clínico'];
+$iconosPagina = ['nuevo' => 'bi-plus-circle', 'editar' => 'bi-pencil-square', 'ver' => 'bi-file-earmark-medical'];
+if ($modo === 'nuevo') {
+    $subtituloPagina = 'Formulario estandarizado para registrar un caso en el banco de Hospital Virtual.';
+} else {
+    $subtituloPagina = ($identificadorCaso !== '' ? $identificadorCaso . ' · ' : '') . ($tituloCaso !== '' ? $tituloCaso : 'Caso sin título');
+}
+
+hv_encabezado($titulosPagina[$modo], $modo === 'nuevo' ? 'nuevo' : 'casos');
+hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $subtituloPagina, $iconosPagina[$modo]);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($titulosPagina[$modo]) ?></title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-        }
-        .form-container {
-            max-width: 1000px;
-            margin: 40px auto;
-            background: #fff;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        }
-        .header-title {
-            color: #2c3e50;
-            font-weight: 700;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 10px;
-            margin-bottom: 30px;
-        }
-        .section-title {
-            background-color: #eef2f5;
-            padding: 10px 15px;
-            border-left: 4px solid #3498db;
-            border-radius: 4px;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-top: 40px;
-            margin-bottom: 20px;
-            color: #2c3e50;
-        }
-        .btn-remove {
-            cursor: pointer;
-        }
-        .animate-fade {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .form-control:focus, .form-check-input:focus {
-            border-color: #3498db;
-            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-        }
-        .art-item-container {
-            transition: all 0.2s ease;
-        }
-        .art-item-container:hover {
-            box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important;
-        }
-    </style>
-</head>
-<body class="py-4 py-md-5">
+<main class="container pb-5 position-relative">
+<div class="hv-tarjeta hv-formulario-caso p-3 p-md-5 hv-aparecer">
 
-<div class="container main-container bg-white p-4 p-md-5 rounded-4 shadow-sm border">
-    
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
-      <div class="container">
-        <a class="navbar-brand" href="lista_casos.php">
-            <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Casos Clínicos
-        </a>
-        <div class="collapse navbar-collapse">
-          <ul class="navbar-nav me-auto">
-            <li class="nav-item">
-              <a class="nav-link" href="lista_casos.php">Lista de Casos</a>
-            </li>
-            <?php if ($rolUsuario === 'Administrador'): ?>
-            <li class="nav-item">
-              <a class="nav-link" href="gestion_usuarios.php">Gestión de Usuarios</a>
-            </li>
-            <?php endif; ?>
-          </ul>
-
-          <div class="d-flex align-items-center text-white">
-              <span class="me-3 small">
-                  <i class="bi bi-person-circle text-primary me-1"></i> 
-                  <?= htmlspecialchars($_SESSION['nombre_completo']) ?> 
-                  <span class="badge bg-secondary ms-1"><?= $rolUsuario ?></span>
-              </span>
-              <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
-              <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
-          </div>
-        </div>
-      </div>
-    </nav>
-    
-    <?php if ($modo === 'nuevo'): ?>
-    <div class="text-center mb-5">
-        <h1 class="fw-bold text-primary mb-2">NUEVO CASO CLÍNICO</h1>
-        <p class="text-muted">Formulario para la estandarización y recolección de casos médicos</p>
-    </div>
-    <?php else: ?>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <?php if ($modo === 'editar'): ?>
-        <h2><i class="bi bi-pencil-square text-warning me-2"></i>Editar Caso Clínico #<?= $idCaso ?></h2>
-        <a href="lista_casos.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Cancelar y Volver</a>
-        <?php else: ?>
-        <h2><i class="bi bi-file-earmark-medical text-primary me-2"></i>Caso Clínico</h2>
-        <a href="lista_casos.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Volver al listado</a>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <a href="lista_casos.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i><?= $modo === 'editar' ? 'Cancelar y volver' : 'Volver a la lista' ?></a>
+        <?php if ($modo === 'ver' && $rolUsuario !== 'Invitado'): ?>
+            <a href="caso_editar.php?id=<?= (int)$idCaso ?>" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i>Editar este caso</a>
+        <?php elseif ($modo === 'ver'): ?>
+            <span class="hv-chip"><i class="bi bi-eye me-1"></i>Solo lectura</span>
         <?php endif; ?>
     </div>
+    <?php if ($modo === 'ver'): ?>
+        <p class="text-muted small mb-0"><i class="bi bi-lock me-1"></i>Vista de solo lectura: los campos no se pueden modificar.</p>
     <?php endif; ?>
 
     <?php if(isset($_GET['error'])): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
             <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i><?= $modo === 'nuevo' ? 'No se pudo guardar el caso' : 'No se pudieron guardar los cambios' ?></h5>
             <p class="mb-0 small">Detalle del error: <code><?= htmlspecialchars($_GET['error']) ?></code></p>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -978,29 +891,28 @@ $titulosPagina = ['nuevo' => 'Nuevo caso clínico', 'editar' => 'Editar caso cl�
             </div>
         </div>
 
-        <hr class="my-5">
-        
-        <?php if ($modo === 'nuevo'): ?>
-        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" id="btn-guardar">
-            <i class="bi bi-cloud-arrow-up me-2"></i> GUARDAR CASO CLÍNICO
-        </button>
-        <?php elseif ($modo === 'editar'): ?>
-        <div class="mt-4 pt-3 border-top d-flex justify-content-end">
-            <a href="lista_casos.php" class="btn btn-secondary me-2">Descartar Cambios</a>
-            <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" id="btn-guardar">
-                <i class="bi bi-cloud-arrow-up me-2"></i> GUARDAR CAMBIOS
+        <div class="hv-barra-guardar mt-5">
+            <?php if ($modo === 'nuevo'): ?>
+            <a href="lista_casos.php" class="btn btn-outline-secondary btn-lg">Cancelar</a>
+            <button type="submit" class="btn btn-turquesa btn-lg flex-grow-1" id="btn-guardar">
+                <i class="bi bi-cloud-arrow-up me-2"></i>Guardar caso clínico
             </button>
+            <?php elseif ($modo === 'editar'): ?>
+            <a href="lista_casos.php" class="btn btn-outline-secondary btn-lg">Descartar cambios</a>
+            <button type="submit" class="btn btn-turquesa btn-lg flex-grow-1" id="btn-guardar">
+                <i class="bi bi-cloud-arrow-up me-2"></i>Guardar cambios
+            </button>
+            <?php else: ?>
+            <a href="lista_casos.php" class="btn btn-outline-secondary btn-lg"><i class="bi bi-arrow-left me-1"></i>Regresar a la lista de casos</a>
+            <?php if ($rolUsuario !== 'Invitado'): ?>
+                <a href="caso_editar.php?id=<?= (int)$idCaso ?>" class="btn btn-primary btn-lg"><i class="bi bi-pencil me-1"></i>Editar este caso</a>
+            <?php endif; ?>
+            <?php endif; ?>
         </div>
-        <?php else: ?>
-        <div class="mt-4 pt-3 border-top d-flex justify-content-end">
-            <a href="lista_casos.php" class="btn btn-secondary me-2">REGRESAR A LISTA DE CASOS</a>
-        </div>
-        <?php endif; ?>
     </form>
 </div>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</main>
+<?php hv_pie(); ?>
 
 <!-- Lógica de JavaScript -->
 <script>

@@ -485,3 +485,37 @@ section[id] { scroll-margin-top: 5.5rem; }
 
 /* Mi perfil */
 .hv-avatar-grande { width: 5.5rem; height: 5.5rem; font-size: 1.9rem; box-shadow: var(--hv-sombra); }
+
+/* Formulario de casos (nuevo, editar y ver) */
+.hv-formulario-caso .section-title {
+    display: flex; align-items: center; gap: .5rem;
+    background: var(--hv-morado-claro);
+    color: var(--hv-morado-oscuro);
+    border-left: 5px solid var(--hv-morado);
+    border-radius: .75rem;
+    padding: .7rem 1rem;
+    font-size: 1.15rem; font-weight: 800; letter-spacing: .02em;
+    margin: 2.5rem 0 1.25rem;
+}
+.hv-formulario-caso .section-title .bi { color: var(--hv-turquesa) !important; }
+.hv-formulario-caso .form-label { font-weight: 700; }
+.hv-formulario-caso .form-check-input:checked { background-color: var(--hv-morado); border-color: var(--hv-morado); }
+.hv-formulario-caso .form-check-input:focus { box-shadow: 0 0 0 .25rem rgba(var(--hv-morado-rgb), .15); border-color: var(--hv-morado); }
+.hv-formulario-caso .card { border-color: var(--hv-borde); border-radius: var(--hv-radio); }
+.hv-formulario-caso .form-control:disabled, .hv-formulario-caso .form-select:disabled { background-color: #faf8fd; color: var(--hv-texto); opacity: 1; }
+.btn-remove { cursor: pointer; }
+.animate-fade { animation: hv-aparecer .3s ease-in-out; }
+.art-item-container { transition: box-shadow .2s ease; border-color: var(--hv-borde) !important; border-radius: .75rem !important; }
+.art-item-container:hover { box-shadow: var(--hv-sombra-alta) !important; }
+
+/* Botones de guardar fijos al pie mientras se recorre el formulario */
+.hv-barra-guardar {
+    position: sticky; bottom: 0; z-index: 10;
+    display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end;
+    background: rgba(255, 255, 255, .95);
+    backdrop-filter: blur(4px);
+    border-top: 1px solid var(--hv-borde);
+    margin-inline: -1rem; padding: 1rem;
+    border-radius: 0 0 var(--hv-radio) var(--hv-radio);
+}
+@media (min-width: 768px) { .hv-barra-guardar { margin-inline: -3rem; padding: 1rem 3rem; } }
