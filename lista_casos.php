@@ -169,6 +169,24 @@ hv_cabecera('Casos clínicos', 'Banco de casos que se juegan en Hospital Virtual
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if ($esAdmin && $total_casos > 0): ?>
+            <!-- Reportes en PDF (solo administradores): los seleccionados (se recuerdan al cambiar de página) o todos -->
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-3 pt-3 border-top">
+                <span class="small fw-bold text-muted me-1"><i class="bi bi-file-earmark-pdf me-1"></i>Reportes PDF:</span>
+                <form action="reporte_casos.php" method="POST" target="_blank" id="form-reporte-seleccion" class="m-0">
+                    <input type="hidden" name="csrf" value="<?= h(hv_token_csrf()) ?>">
+                    <button type="submit" class="btn btn-sm btn-primary" id="btn-reporte-seleccion" disabled>
+                        <i class="bi bi-check2-square me-1"></i>De los seleccionados (<span id="conteo-seleccion">0</span>)
+                    </button>
+                </form>
+                <button type="button" class="btn btn-sm btn-link text-decoration-none d-none" id="btn-limpiar-seleccion">Quitar la selección</button>
+                <a href="reporte_casos.php?todos=1<?= $filtro_departamento !== '' ? '&amp;departamento=' . h(urlencode($filtro_departamento)) : '' ?>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"
+                   title="Un solo documento con <?= $filtro_departamento !== '' ? 'los casos de la búsqueda' : 'todos los casos del banco' ?>">
+                    <i class="bi bi-files me-1"></i><?= $filtro_departamento !== '' ? 'De los ' . number_format($total_casos) . ' de la búsqueda' : 'De todos (' . number_format($total_casos) . ')' ?>
+                </a>
+            </div>
+        <?php endif; ?>
     </section>
 
     <?php if ($mensaje !== null): ?>
@@ -202,6 +220,11 @@ hv_cabecera('Casos clínicos', 'Banco de casos que se juegan en Hospital Virtual
             <table class="table table-hover align-middle hv-tabla">
                 <thead>
                     <tr>
+                        <?php if ($esAdmin): ?>
+                            <th class="text-center" style="width: 2.5rem">
+                                <input class="form-check-input" type="checkbox" id="seleccionar-pagina" title="Seleccionar los casos de esta página" aria-label="Seleccionar los casos de esta página">
+                            </th>
+                        <?php endif; ?>
                         <th>Identificador</th>
                         <th style="min-width: 16rem">Caso</th>
                         <th>Departamentos</th>
@@ -228,6 +251,11 @@ hv_cabecera('Casos clínicos', 'Banco de casos que se juegan en Hospital Virtual
                         $departamentos = array_filter(array_map('trim', array_map('strval', (array)$departamentos)), 'strlen');
                     ?>
                         <tr>
+                            <?php if ($esAdmin): ?>
+                                <td class="text-center">
+                                    <input class="form-check-input seleccion-caso" type="checkbox" value="<?= (int)$row['id'] ?>" aria-label="Incluir el caso <?= h($identificador !== '' ? $identificador : '#' . $row['id']) ?> en el reporte">
+                                </td>
+                            <?php endif; ?>
                             <td>
                                 <?php if ($identificador !== ''): ?>
                                     <span class="hv-chip"><?= h($identificador) ?></span>
@@ -303,6 +331,57 @@ hv_cabecera('Casos clínicos', 'Banco de casos que se juegan en Hospital Virtual
 <?php hv_pie(); ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Selección para el reporte PDF (solo administradores). Se guarda en esta pestaña para que no se
+    // pierda al cambiar de página o al buscar.
+    const formReporte = document.getElementById('form-reporte-seleccion');
+    if (formReporte) {
+        const CLAVE = 'hv_reporte_seleccion';
+        const leer = () => { try { return JSON.parse(sessionStorage.getItem(CLAVE) || '[]').filter(n => Number.isInteger(n)); } catch (e) { return []; } };
+        const escribir = lista => { try { sessionStorage.setItem(CLAVE, JSON.stringify(lista)); } catch (e) { /* sin almacenamiento */ } };
+        let seleccion = new Set(leer());
+        const casillas = Array.from(document.querySelectorAll('.seleccion-caso'));
+        const todasPagina = document.getElementById('seleccionar-pagina');
+        const boton = document.getElementById('btn-reporte-seleccion');
+        const limpiar = document.getElementById('btn-limpiar-seleccion');
+
+        function pintar() {
+            casillas.forEach(c => { c.checked = seleccion.has(parseInt(c.value, 10)); });
+            if (todasPagina) {
+                const marcadas = casillas.filter(c => c.checked).length;
+                todasPagina.checked = casillas.length > 0 && marcadas === casillas.length;
+                todasPagina.indeterminate = marcadas > 0 && marcadas < casillas.length;
+            }
+            document.getElementById('conteo-seleccion').textContent = seleccion.size;
+            boton.disabled = seleccion.size === 0;
+            limpiar.classList.toggle('d-none', seleccion.size === 0);
+            escribir(Array.from(seleccion));
+        }
+
+        casillas.forEach(c => c.addEventListener('change', () => {
+            const id = parseInt(c.value, 10);
+            if (c.checked) seleccion.add(id); else seleccion.delete(id);
+            pintar();
+        }));
+        if (todasPagina) todasPagina.addEventListener('change', () => {
+            casillas.forEach(c => { const id = parseInt(c.value, 10); if (todasPagina.checked) seleccion.add(id); else seleccion.delete(id); });
+            pintar();
+        });
+        limpiar.addEventListener('click', () => { seleccion = new Set(); pintar(); });
+
+        // Al enviar, los ids seleccionados viajan como campos ocultos
+        formReporte.addEventListener('submit', () => {
+            formReporte.querySelectorAll('input[name="ids[]"]').forEach(e => e.remove());
+            seleccion.forEach(id => {
+                const campo = document.createElement('input');
+                campo.type = 'hidden';
+                campo.name = 'ids[]';
+                campo.value = id;
+                formReporte.appendChild(campo);
+            });
+        });
+        pintar();
+    }
+
     // Descargar el JSON de un caso desde la lista
     document.querySelectorAll('.btn-descargar-json').forEach(boton => {
         boton.addEventListener('click', function () {

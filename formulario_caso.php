@@ -25,11 +25,15 @@ if ($modo !== 'nuevo') {
         $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $pass);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        $stmt = $pdo->prepare("SELECT datos_completos FROM casos_clinicos WHERE id = :id");
+        $stmt = $pdo->prepare("SELECT datos_completos, rutas_archivos, fecha_registro FROM casos_clinicos WHERE id = :id");
         $stmt->execute([':id' => $idCaso]);
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$resultado) {
+            if (!empty($modoReporte)) {
+                http_response_code(404);
+                exit('No se encontró el caso #' . $idCaso . '.');
+            }
             header("Location: lista_casos.php?error=not_found");
             exit;
         }
@@ -56,7 +60,8 @@ if ($modo === 'nuevo') {
     $subtituloPagina = ($identificadorCaso !== '' ? $identificadorCaso . ' · ' : '') . ($tituloCaso !== '' ? $tituloCaso : 'Caso sin título');
 }
 
-hv_encabezado($titulosPagina[$modo], $modo === 'nuevo' ? 'nuevo' : 'casos');
+// En modo reporte (reporte_caso.php) el formulario se carga oculto: solo se usa para leer los datos
+hv_encabezado($titulosPagina[$modo], $modo === 'nuevo' ? 'nuevo' : 'casos', !empty($modoReporte) ? ['clase' => 'hv-modo-reporte'] : []);
 hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $subtituloPagina, $iconosPagina[$modo]);
 ?>
 <main class="container pb-5 position-relative">
@@ -64,11 +69,17 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
         <a href="lista_casos.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i><?= $modo === 'editar' ? 'Cancelar y volver' : 'Volver a la lista' ?></a>
+        <div class="d-flex flex-wrap gap-2">
+        <?php if ($modo !== 'nuevo' && $rolUsuario === 'Administrador'): ?>
+            <a href="reporte_caso.php?id=<?= (int)$idCaso ?>" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener"
+               title="<?= $modo === 'editar' ? 'Reporte con los datos guardados (no incluye cambios sin guardar)' : 'Reporte completo del caso para imprimir o guardar como PDF' ?>"><i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF</a>
+        <?php endif; ?>
         <?php if ($modo === 'ver' && $rolUsuario !== 'Invitado'): ?>
             <a href="caso_editar.php?id=<?= (int)$idCaso ?>" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i>Editar este caso</a>
         <?php elseif ($modo === 'ver'): ?>
             <span class="hv-chip"><i class="bi bi-eye me-1"></i>Solo lectura</span>
         <?php endif; ?>
+        </div>
     </div>
     <?php if ($modo === 'ver'): ?>
         <p class="text-muted small mb-0"><i class="bi bi-lock me-1"></i>Vista de solo lectura: los campos no se pueden modificar.</p>
@@ -2264,6 +2275,14 @@ function prepararLecturaApartados() {
     // La altura de los cuadros con texto se ajusta al mostrar cada paso (ajustarAlturasLectura)
 }
 </script>
+<?php if (!empty($modoReporte)): ?>
+<!-- Reporte del caso (reporte_caso.php): se arma con el formulario ya cargado -->
+<link href="assets/css/reporte.css?v=2" rel="stylesheet">
+<script>
+window.HV_REPORTE = <?= json_encode(hv_reporte_datos($idCaso, $datosCabecera, $resultado['rutas_archivos'] ?? '', $resultado['fecha_registro'] ?? ''), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+</script>
+<script src="assets/js/reporte_caso.js?v=1"></script>
+<?php endif; ?>
 
 </body>
 </html>

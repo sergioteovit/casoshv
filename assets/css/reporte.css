@@ -1,0 +1,208 @@
+/* Reportes de casos clínicos (reporte_caso.php y reporte_casos.php).
+   En pantalla se ven como hojas sobre un fondo gris; al imprimir o guardar como PDF salen en tamaño carta,
+   con el pie de página y el número de página. Colores del Gestor de Casos (gestor.css). */
+
+:root {
+    --rep-morado: #6b3fa0;
+    --rep-morado-oscuro: #2a1552;
+    --rep-morado-medio: #4a2780;
+    --rep-morado-claro: #f1ebf9;
+    --rep-turquesa: #13a89e;
+    --rep-turquesa-claro: #e3f6f4;
+    --rep-coral: #ff7a66;
+    --rep-texto: #231a33;
+    --rep-suave: #6b6280;
+    --rep-borde: #e2d9ef;
+}
+
+/* ------------------------------------------------------------ pantalla */
+body.hv-modo-reporte { background: #ebe6f2; }
+/* El formulario se queda en la página (de ahí se leen los datos) pero no se muestra */
+body.hv-modo-reporte .hv-barra,
+body.hv-modo-reporte .hv-principal,
+body.hv-modo-reporte .hv-pie { display: none !important; }
+
+.rep-herramientas {
+    position: sticky; top: 0; z-index: 10;
+    background: linear-gradient(90deg, var(--rep-morado-oscuro), var(--rep-morado-medio));
+    color: #fff; box-shadow: 0 .25rem 1rem rgba(42, 21, 82, .25);
+}
+.rep-herramientas-contenido {
+    max-width: 216mm; margin: 0 auto; padding: .75rem 1rem;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem;
+}
+.rep-herramientas-texto { display: flex; flex-direction: column; font-size: .85rem; line-height: 1.3; }
+.rep-herramientas-texto strong { font-family: "Exo 2", sans-serif; font-size: 1rem; }
+.rep-herramientas-texto span { color: rgba(255, 255, 255, .8); }
+.rep-progreso { height: .5rem; border-radius: 999px; background: rgba(255, 255, 255, .25); overflow: hidden; min-width: 12rem; }
+.rep-progreso > div { height: 100%; width: 0; background: #f5b93e; transition: width .3s; }
+
+.rep-documento { padding: 1.5rem .75rem 3rem; }
+.rep-caso, .rep-portada-lote {
+    background: #fff;
+    width: 216mm; max-width: 100%;
+    margin: 0 auto 1.5rem;
+    padding: 16mm 16mm 14mm;
+    box-shadow: 0 .5rem 1.5rem rgba(42, 21, 82, .15);
+    border-radius: 4px;
+}
+
+/* ------------------------------------------------------------ tipografía */
+.rep-caso, .rep-portada-lote {
+    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-size: 10.5pt; line-height: 1.5; color: var(--rep-texto);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.rep-caso h1, .rep-caso h2, .rep-caso h3, .rep-caso h4,
+.rep-portada-lote h1, .rep-portada-lote h2 { font-family: "Exo 2", "Segoe UI", sans-serif; color: var(--rep-morado-oscuro); }
+
+/* ------------------------------------------------------------ portada del caso */
+.rep-portada { margin-bottom: 8mm; }
+.rep-banda {
+    display: flex; align-items: center; gap: 5mm;
+    background: linear-gradient(120deg, var(--rep-morado-oscuro), var(--rep-morado));
+    color: #fff; border-radius: 3mm; padding: 4mm 6mm;
+}
+.rep-logos { display: flex; gap: 3mm; flex-shrink: 0; }
+.rep-logos img { height: 15mm; width: auto; }
+.rep-institucion-1 { font-weight: 800; font-size: 9.5pt; }
+.rep-institucion-2 { font-size: 9pt; opacity: .85; }
+.rep-portada-cuerpo { padding: 6mm 1mm 0; }
+.rep-tipo {
+    display: inline-block; font-family: "Exo 2", sans-serif; font-weight: 700; font-size: 8.5pt;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--rep-turquesa);
+}
+.rep-titulo { font-size: 19pt; line-height: 1.2; margin: 1mm 0 4mm; font-weight: 800; }
+.rep-portada-datos {
+    display: grid; grid-template-columns: max-content 1fr; gap: 1.2mm 5mm;
+    margin: 0 0 4mm; padding: 3.5mm 5mm; background: var(--rep-morado-claro); border-radius: 2.5mm;
+}
+.rep-portada-datos dt { font-weight: 800; color: var(--rep-morado-medio); font-size: 9pt; }
+.rep-portada-datos dd { margin: 0; font-size: 9.5pt; }
+.rep-confidencial {
+    font-size: 8.5pt; color: var(--rep-suave); margin: 0;
+    border-left: 3px solid var(--rep-coral); padding: 1mm 0 1mm 3mm;
+}
+
+/* ------------------------------------------------------------ secciones */
+.rep-seccion { margin-top: 7mm; }
+.rep-seccion-titulo {
+    display: flex; align-items: center; gap: 3mm;
+    font-size: 13.5pt; font-weight: 800; margin: 0 0 3mm;
+    padding-bottom: 2mm; border-bottom: 2px solid var(--rep-morado);
+    break-after: avoid; page-break-after: avoid;
+}
+.rep-seccion-numero {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 7.5mm; height: 7.5mm; border-radius: 50%;
+    background: var(--rep-morado); color: #fff; font-size: 10pt; flex-shrink: 0;
+}
+.rep-subtitulo {
+    font-size: 9.5pt; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--rep-morado-medio); margin: 5mm 0 2mm;
+    break-after: avoid; page-break-after: avoid;
+}
+.rep-grupo {
+    font-size: 10pt; font-weight: 700; color: var(--rep-turquesa);
+    margin: 4mm 0 1.5mm; break-after: avoid; page-break-after: avoid;
+}
+
+/* Datos cortos: etiqueta y valor en renglones */
+.rep-ficha { display: grid; grid-template-columns: minmax(32%, max-content) 1fr; margin: 0 0 3mm; }
+.rep-ficha dt, .rep-ficha dd { padding: 1.4mm 2.5mm; border-bottom: 1px solid var(--rep-borde); margin: 0; }
+.rep-ficha dt { font-weight: 700; color: var(--rep-suave); font-size: 9pt; }
+.rep-ficha dt:nth-of-type(odd), .rep-ficha dt:nth-of-type(odd) + dd { background: #faf8fd; }
+
+/* Textos largos */
+.rep-bloque { margin: 0 0 3.5mm; }
+.rep-etiqueta { font-weight: 800; color: var(--rep-morado-medio); font-size: 9.5pt; margin-bottom: 1mm; break-after: avoid; page-break-after: avoid; }
+.rep-texto {
+    white-space: pre-wrap; overflow-wrap: anywhere; text-align: justify;
+    border-left: 3px solid var(--rep-morado-claro); padding: .5mm 0 .5mm 3.5mm;
+}
+.rep-lista { margin: 0 0 0 1mm; padding-left: 5mm; }
+.rep-lista li { margin-bottom: .8mm; }
+
+/* Tablas */
+.rep-tabla { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm; font-size: 9.5pt; }
+.rep-tabla th {
+    background: var(--rep-morado-claro); color: var(--rep-morado-oscuro); text-align: left;
+    font-weight: 800; padding: 2mm 2.5mm; border: 1px solid var(--rep-borde);
+}
+.rep-tabla td { padding: 2mm 2.5mm; border: 1px solid var(--rep-borde); vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rep-tabla tr { break-inside: avoid; page-break-inside: avoid; }
+.rep-tabla thead { display: table-header-group; }
+.rep-fila-correcta td { background: var(--rep-turquesa-claro); }
+.rep-tabla-diferenciales th:first-child { width: 24%; }
+.rep-pregunta .rep-tabla th:nth-child(2) { width: 34%; }
+.rep-insignia {
+    display: inline-block; margin-left: 2mm; padding: .2mm 2mm; border-radius: 999px;
+    background: var(--rep-turquesa); color: #fff; font-size: 7.5pt; font-weight: 800; vertical-align: middle;
+}
+
+.rep-destacado {
+    display: flex; flex-wrap: wrap; gap: 1mm 4mm; align-items: baseline;
+    border: 1.5px solid var(--rep-turquesa); background: var(--rep-turquesa-claro);
+    border-radius: 2.5mm; padding: 2.5mm 4mm; margin: 0 0 3mm;
+}
+.rep-destacado-etiqueta { font-weight: 800; color: #0c7a73; font-size: 9pt; text-transform: uppercase; letter-spacing: .06em; }
+.rep-destacado-valor { font-weight: 800; font-size: 11pt; }
+
+/* Preguntas */
+.rep-pregunta { border: 1px solid var(--rep-borde); border-radius: 2.5mm; padding: 3mm 4mm 1mm; margin: 0 0 4mm; break-inside: avoid; page-break-inside: avoid; }
+.rep-pregunta-titulo { display: flex; gap: 3mm; align-items: baseline; font-weight: 700; margin-bottom: 2mm; }
+.rep-pregunta-numero {
+    flex-shrink: 0; background: var(--rep-morado); color: #fff; border-radius: 999px;
+    padding: .3mm 2.5mm; font-size: 8.5pt; font-family: "Exo 2", sans-serif;
+}
+.rep-pregunta .rep-tabla td:first-child, .rep-pregunta .rep-tabla th:first-child { width: 8mm; text-align: center; }
+.rep-opcion-letra span { font-weight: 800; color: var(--rep-morado); }
+.rep-nota { font-size: 8.5pt; color: var(--rep-suave); margin: 0 0 2mm; }
+
+/* Anexos */
+.rep-figura { margin: 0 0 5mm; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+.rep-figura img { max-width: 100%; max-height: 150mm; border: 1px solid var(--rep-borde); border-radius: 2mm; }
+.rep-figura figcaption { font-size: 8.5pt; color: var(--rep-suave); margin-top: 1.5mm; font-style: italic; }
+
+.rep-generado { margin: 8mm 0 0; padding-top: 2mm; border-top: 1px solid var(--rep-borde); font-size: 8pt; color: var(--rep-suave); }
+.rep-error { color: #b42318; font-weight: 700; }
+
+/* ------------------------------------------------------------ portada del reporte de varios casos */
+.rep-portada-lote .rep-banda { margin-bottom: 12mm; }
+.rep-lote-titulo { font-size: 24pt; font-weight: 800; margin: 0 0 2mm; }
+.rep-lote-subtitulo { font-size: 11pt; color: var(--rep-suave); margin: 0 0 6mm; }
+.rep-indice { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+.rep-indice th { text-align: left; border-bottom: 2px solid var(--rep-morado); padding: 1.5mm 2mm; color: var(--rep-morado-oscuro); }
+.rep-indice td { border-bottom: 1px solid var(--rep-borde); padding: 1.5mm 2mm; vertical-align: top; }
+.rep-indice tr { break-inside: avoid; page-break-inside: avoid; }
+.rep-indice .rep-num { color: var(--rep-suave); width: 10mm; }
+
+/* En pantallas angostas la hoja usa menos margen */
+@media screen and (max-width: 640px) {
+    .rep-documento { padding: .75rem .25rem 2rem; }
+    .rep-caso, .rep-portada-lote { padding: 6mm 5mm; }
+    .rep-banda { flex-direction: column; align-items: flex-start; }
+    .rep-ficha { grid-template-columns: 1fr; }
+    .rep-ficha dt { border-bottom: 0; padding-bottom: 0; }
+}
+
+/* ------------------------------------------------------------ impresión */
+@page {
+    size: letter;
+    margin: 15mm 14mm 17mm;
+    @bottom-left { content: "Hospital Virtual FacMed · Banco de casos clínicos · Uso académico interno"; font-family: "Nunito", sans-serif; font-size: 7.5pt; color: #6b6280; }
+    @bottom-right { content: "Página " counter(page) " de " counter(pages); font-family: "Nunito", sans-serif; font-size: 7.5pt; color: #6b6280; }
+}
+
+@media print {
+    body.hv-modo-reporte, body { background: #fff !important; }
+    .rep-herramientas, .no-imprimir { display: none !important; }
+    .rep-documento { padding: 0; }
+    .rep-caso, .rep-portada-lote {
+        width: auto; max-width: none; margin: 0; padding: 0;
+        box-shadow: none; border-radius: 0;
+    }
+    /* Cada caso empieza en hoja nueva */
+    .rep-caso + .rep-caso, .rep-portada-lote + .rep-caso { break-before: page; page-break-before: always; }
+    a { color: inherit; text-decoration: none; }
+}
