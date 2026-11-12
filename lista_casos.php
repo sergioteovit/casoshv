@@ -92,319 +92,212 @@ $casos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // --- ESTADÍSTICA: Contar el número total de casos en el arreglo ---
 //$totalCasos = count($casos);
 $totalCasos = $total_casos;
+
+// Total sin filtro, para mostrar cuántos casos hay en el banco
+$total_general = $filtro_departamento !== '' ? (int)$pdo->query("SELECT COUNT(*) FROM casos_clinicos")->fetchColumn() : (int)$total_casos;
+
+require_once __DIR__ . '/plantilla.php';
+
+$mensajes = [
+    'success' => ['success', 'bi-check-circle-fill', '¡El nuevo caso clínico se registró y guardó con éxito!'],
+    'updated' => ['success', 'bi-pencil-square', '¡El caso clínico se actualizó correctamente!'],
+    'deleted' => ['success', 'bi-trash', 'El caso clínico se eliminó de la base de datos.'],
+];
+$mensaje = $mensajes[$_GET['msg'] ?? ''] ?? null;
+$esAdmin = $rolUsuario === 'Administrador';
+
+hv_encabezado('Casos clínicos', 'casos');
+hv_cabecera('Casos clínicos', 'Banco de casos que se juegan en Hospital Virtual FacMed.', 'bi-clipboard2-pulse', 'assets/img/cabecera-casos.png');
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Casos Clínicos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        body {
-            background-color: #f4f7f6;
-        }
-        .badge-autor {
-            background-color: #e9ecef;
-            color: #495057;
-            border: 1px solid #ced4da;
-            margin-right: 4px;
-            margin-bottom: 4px;
-            display: inline-block;
-            padding: 0.35em 0.65em;
-            font-size: 0.75em;
-            font-weight: 500;
-            border-radius: 4px;
-        }
-        .card-stat {
-            border-left: 5px solid #0d6efd; /* Borde dinámico azul de Bootstrap */
-            transition: transform 0.2s;
-        }
-        .card-stat:hover {
-            transform: translateY(-3px);
-        }
-    </style>
-</head>
-<body>
+<main class="container pb-5 position-relative">
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-  <div class="container">
-    <a class="navbar-brand" href="lista_casos.php">Casos Clínicos</a>
-    <div class="collapse navbar-collapse">
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item">
-          <a class="nav-link active" href="lista_casos.php">Lista de Casos</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-info fw-bold" href="hyfm.php">
-                <i class="bi bi-collection-fill me-1"></i> Historia y FM
-            </a>
-        </li>
-        <?php if ($rolUsuario === 'Administrador'): ?>
-        <li class="nav-item">
-          <a class="nav-link" href="gestion_usuarios.php">Gestión de Usuarios</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-warning" href="verificador_casos.php">
-                <i class="bi bi-ui-checks-grid me-1"></i> Auditoría de Variables
-            </a>
-        </li>
-        <?php endif; ?>
-      </ul>
-      <div class="d-flex align-items-center text-white">
-          <span class="me-3 small">
-              <i class="bi bi-person-circle"></i> <?= htmlspecialchars($_SESSION['nombre_completo']) ?> (<?= htmlspecialchars($rolUsuario) ?>)
-          </span>
-          <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
-          <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
-      </div>
-    </div>
-  </div>
-</nav>
-
-<div class="container my-5">
-    
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-folder-fill text-primary me-2"></i> Panel de Casos Clínicos</h2>
-        <div class="d-flex align-items-center gap-3 mt-3 mt-md-0">
-            <form action="lista_casos.php" method="GET" class="d-flex m-0">
-                <div class="input-group shadow-sm">
-                    <span class="input-group-text bg-white"><i class="bi bi-funnel text-muted"></i></span>
-                    <input type="text" name="departamento" class="form-control" placeholder="Filtrar por departamento..." value="<?= htmlspecialchars($filtro_departamento) ?>">
-                    <button class="btn btn-primary" type="submit">Filtrar</button>
-
-                    <?php if (!empty($filtro_departamento)): ?>
-                        <a href="lista_casos.php" class="btn btn-outline-danger" title="Limpiar filtro"><i class="bi bi-x-lg"></i></a>
-                    <?php endif; ?>
-                </div>
-            </form>
-
-            <?php if ($_SESSION['rol'] !== 'Invitado'): ?>
-                <a href="nuevo_caso.php" class="btn btn-success shadow-sm text-nowrap">
-                    <i class="bi bi-plus-circle me-1"></i> Nuevo Caso
-                </a>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-md-4 col-sm-6">
-            <div class="card shadow-sm card-stat">
-                <div class="card-body d-flex align-items-center justify-content-between">
-                    <div>
-                        <h6 class="text-muted text-uppercase small mb-1 fw-bold">Total de Casos</h6>
-                        <h2 class="display-6 fw-bold text-dark mb-0"><?= $totalCasos ?></h2>
-                    </div>
-                    <div class="bg-primary bg-opacity-10 p-3 rounded">
-                        <i class="bi bi-database-fill text-primary fs-3 lh-1"></i>
-                        <!-- Botón Descargar Todo (Solo visible para Admin/Editor) -->
-                        <?php if ($_SESSION['rol'] !== 'Invitado' && $_SESSION['rol'] !== 'Editor'): ?>
-                            <a href="descargar_backup.php" class="btn btn-outline-success shadow-sm text-nowrap" title="Descargar copia de seguridad de todos los casos">
-                                <i class="bi bi-file-earmark-zip me-1"></i> Descargar Casos (ZIP)
-                            </a>
+    <section class="hv-tarjeta p-3 p-md-4 mb-4 hv-aparecer">
+        <div class="row g-3 align-items-center">
+            <div class="col-lg-auto d-flex align-items-center gap-3 me-lg-auto">
+                <span class="hv-icono"><i class="bi bi-folder2-open"></i></span>
+                <div>
+                    <div class="hv-titulo h4 mb-0"><?= number_format($total_casos) ?> <?= $total_casos == 1 ? 'caso' : 'casos' ?></div>
+                    <div class="text-muted small">
+                        <?php if ($filtro_departamento !== ''): ?>
+                            con «<?= h($filtro_departamento) ?>» de <?= number_format($total_general) ?> en total
+                        <?php else: ?>
+                            registrados en el banco
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
+            <div class="col-lg-5">
+                <form action="lista_casos.php" method="GET" class="m-0" role="search">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="search" name="departamento" class="form-control" placeholder="Buscar por departamento, autor o palabra…" aria-label="Buscar casos" value="<?= h($filtro_departamento) ?>">
+                        <?php if ($filtro_departamento !== ''): ?>
+                            <a href="lista_casos.php" class="btn btn-outline-secondary" title="Quitar el filtro" aria-label="Quitar el filtro"><i class="bi bi-x-lg"></i></a>
+                        <?php endif; ?>
+                        <button class="btn btn-primary" type="submit">Buscar</button>
+                    </div>
+                </form>
+            </div>
+            <div class="col-lg-auto d-flex flex-wrap gap-2">
+                <a href="nuevo_caso.php" class="btn btn-turquesa"><i class="bi bi-plus-circle me-1"></i>Nuevo caso</a>
+                <?php if ($esAdmin): ?>
+                    <a href="descargar_backup.php" class="btn btn-outline-primary" title="Descargar todos los casos en un ZIP (respaldo)"><i class="bi bi-file-earmark-zip me-1"></i>Respaldo ZIP</a>
+                <?php endif; ?>
+            </div>
         </div>
-        </div>
-    <?php if(isset($_GET['msg']) && $_GET['msg'] == 'updated'): ?>
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <i class="bi bi-pencil-square me-2"></i> ¡El caso clínico ha sido actualizado correctamente en el sistema!
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </section>
+
+    <?php if ($mensaje !== null): ?>
+        <div class="alert alert-<?= $mensaje[0] ?> alert-dismissible fade show" role="alert">
+            <i class="bi <?= $mensaje[1] ?> me-2"></i><?= h($mensaje[2]) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
         </div>
     <?php endif; ?>
-    <?php if(isset($_GET['msg']) && $_GET['msg'] == 'success'): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> ¡El nuevo caso clínico ha sido registrado y guardado con éxito!
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-    <?php if(isset($_GET['msg']) && $_GET['msg'] == 'deleted'): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            El caso clínico ha sido eliminado correctamente de la base de datos.
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-    
-    <?php if(isset($error)): ?>
+    <?php if (isset($error)): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?= htmlspecialchars($error) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <i class="bi bi-exclamation-triangle me-2"></i><?= h($error) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
         </div>
     <?php endif; ?>
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-dark">
+    <section class="hv-tarjeta overflow-hidden hv-aparecer hv-aparecer-2">
+        <?php if (count($casos) === 0): ?>
+            <div class="hv-vacio">
+                <img src="assets/img/mascota-busqueda.png" alt="">
+                <?php if ($filtro_departamento !== ''): ?>
+                    <p class="fw-bold mb-1">No encontramos casos con «<?= h($filtro_departamento) ?>».</p>
+                    <p class="mb-3">Prueba con otra palabra o quita el filtro.</p>
+                    <a href="lista_casos.php" class="btn btn-outline-primary btn-sm">Ver todos los casos</a>
+                <?php else: ?>
+                    <p class="fw-bold mb-1">Aún no hay casos clínicos registrados.</p>
+                    <a href="nuevo_caso.php" class="btn btn-turquesa btn-sm mt-2"><i class="bi bi-plus-circle me-1"></i>Crear el primero</a>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle hv-tabla">
+                <thead>
                     <tr>
-                        <!--th class="ps-3" style="width: 5%">IDBD</!--th-->
-                        <th class="ps-3" style="width: 10%">Identificador</th>
-                        <th style="width: 30%">Descripción</th>
-                        <th style="width: 15%">Departamentos</th>
-                        <th style="width: 15%">Autores</th>
-                        <th style="width: 10%">Fecha de Registro</th>
-                        <th class="text-center" style="width: 20%">Acciones</th>
+                        <th>Identificador</th>
+                        <th style="min-width: 16rem">Caso</th>
+                        <th>Departamentos</th>
+                        <th>Autores</th>
+                        <th>Registro</th>
+                        <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if(count($casos) === 0): ?>
+                    <?php foreach ($casos as $row):
+                        $datos = json_decode($row['datos_completos'], true);
+                        if (!is_array($datos)) {
+                            $datos = [];
+                        }
+                        $identificador = isset($datos['identificador']) && trim((string)$datos['identificador']) !== '' ? (string)$datos['identificador'] : '';
+                        $titulo = isset($datos['titulo_caso']) && trim((string)$datos['titulo_caso']) !== '' ? (string)$datos['titulo_caso'] : 'Sin título';
+
+                        $autores = array_filter(array_map('trim', array_map('strval', (array)($datos['autores'] ?? []))), 'strlen');
+
+                        $departamentos = $datos['departamentos'] ?? null;
+                        if (empty($departamentos)) {
+                            $departamentos = $datos['departamento'] ?? [];
+                        }
+                        $departamentos = array_filter(array_map('trim', array_map('strval', (array)$departamentos)), 'strlen');
+                    ?>
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">No hay casos clínicos registrados en la base de datos.</td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach($casos as $row): 
-                            // Decodificamos el JSON guardado de la BD
-                            $datos = json_decode($row['datos_completos'], true);
-                    
-                            $identificador = isset($datos['identificador']) ? $datos['identificador'] : 'Desconocido';
-                            
-                            // Extraer el título del caso de manera segura
-                            $titulo = isset($datos['titulo_caso']) ? htmlspecialchars($datos['titulo_caso']) : 'Sin título';
-                            
-                            // Procesar la lista de autores
-                            $listaAutoresHTML = '';
-                            if (isset($datos['autores'])) {
-                                if (is_array($datos['autores'])) {
-                                    foreach ($datos['autores'] as $autor) {
-                                        if (trim($autor) !== '') {
-                                            $listaAutoresHTML .= '<span class="badge-autor"><i class="bi bi-person-fill text-secondary me-1"></i>' . htmlspecialchars($autor) . '</span>';
-                                        }
-                                    }
-                                } else {
-                                    if (trim($datos['autores']) !== '') {
-                                        $listaAutoresHTML = '<span class="badge-autor"><i class="bi bi-person-fill text-secondary me-1"></i>' . htmlspecialchars($datos['autores']) . '</span>';
-                                    }
-                                }
-                            }
-                            
-                            if (empty($listaAutoresHTML)) {
-                                $listaAutoresHTML = '<span class="text-muted italic small">No especificados</span>';
-                            }
-                    
-                            // Extraer el departamento (y definir un mensaje de respaldo si está vacío)
-                            $departamentos = isset($datos['departamentos']) ? $datos['departamentos'] : null;
-                            if (empty($departamentos)) {
-                                $departamentos = isset($datos['departamento']) ? $datos['departamento'] : 'No asignado';
-                            }
-                        ?>
-                            <tr>
-                                <!--td class="ps-3 fw-bold"><?= $row['id'] ?></!--td-->
-                                <td>
-                                    <span class="badge bg-primary">
-                                        <?= htmlspecialchars($identificador) ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="fw-semibold text-secondary text-wrap"><?= $titulo ?></div>
-                                </td>
-                                <td>
-                                    <?php if (is_array($departamentos)): ?>
+                            <td>
+                                <?php if ($identificador !== ''): ?>
+                                    <span class="hv-chip"><?= h($identificador) ?></span>
+                                <?php else: ?>
+                                    <span class="hv-chip hv-chip-pendiente" title="Lo asigna un administrador">Sin asignar</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="fw-semibold"><?= h($titulo) ?></td>
+                            <td>
+                                <?php if ($departamentos): ?>
+                                    <div class="d-flex flex-wrap gap-1">
                                         <?php foreach ($departamentos as $dep): ?>
-                                            <span class="badge bg-secondary me-1"><?= htmlspecialchars($dep) ?></span>
+                                            <span class="hv-chip hv-chip-turquesa"><?= h($dep) ?></span>
                                         <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <span class="text-dark fw-medium"><?= htmlspecialchars($departamentos) ?></span>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="text-muted small">No asignado</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="small">
+                                <?php if ($autores): ?>
+                                    <?php foreach ($autores as $autor): ?>
+                                        <div><i class="bi bi-person text-muted me-1"></i><?= h($autor) ?></div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <span class="text-muted">No especificados</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-muted small text-nowrap"><?= h(date('d/m/Y', strtotime($row['fecha_registro']))) ?></td>
+                            <td class="text-end text-nowrap">
+                                <div class="btn-group hv-acciones" role="group" aria-label="Acciones del caso">
+                                    <a href="ver_caso.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver el caso"><i class="bi bi-eye"></i><span class="visually-hidden">Ver</span></a>
+                                    <a href="caso_editar.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-outline-primary" title="Editar el caso"><i class="bi bi-pencil"></i><span class="visually-hidden">Editar</span></a>
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-descargar-json"
+                                            data-titulo="<?= h(pathinfo($identificador !== '' ? $identificador : 'caso_' . $row['id'], PATHINFO_FILENAME)) ?>"
+                                            data-json="<?= h($row['datos_completos']) ?>"
+                                            title="Descargar el JSON del caso"><i class="bi bi-filetype-json"></i><span class="visually-hidden">JSON</span></button>
+                                    <a href="descargar_xml.php?id=<?= (int)$row['id'] ?>" class="btn btn-sm btn-outline-primary" title="Descargar el XML del caso"><i class="bi bi-filetype-xml"></i><span class="visually-hidden">XML</span></a>
+                                    <?php if ($esAdmin): ?>
+                                        <a href="lista_casos.php?eliminar=<?= (int)$row['id'] ?>&amp;csrf=<?= h(hv_token_csrf()) ?>" class="btn btn-sm btn-outline-danger" title="Eliminar el caso"
+                                           onclick="return confirm('¿Eliminar este caso clínico? No se puede deshacer.');"><i class="bi bi-trash"></i><span class="visually-hidden">Eliminar</span></a>
                                     <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="d-flex flex-wrap">
-                                        <?= $listaAutoresHTML ?>
-                                    </div>
-                                </td>
-                                <td class="text-muted"><?= date('d/m/Y H:i', strtotime($row['fecha_registro'])) ?></td>
-                                <td class="text-center">
-                                    <div class="btn-group" role="group">
-                                        <a href="ver_caso.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver detalle completo del caso">
-                                            <i class="bi bi-eye"></i> Ver
-                                        </a>
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-info btn-descargar-json" 
-                                                data-titulo="<?= htmlspecialchars(pathinfo($identificador, PATHINFO_FILENAME), ENT_QUOTES, 'UTF-8'); ?>"
-                                                data-json='<?= htmlspecialchars($row['datos_completos'], ENT_QUOTES, 'UTF-8'); ?>'
-                                                title="Descargar JSON del Caso">
-                                            <i class="bi bi-download"></i> JSON
-                                        </button>
-                                        <a href="descargar_xml.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-info" title="Descargar XML">
-                                            <i class="bi bi-filetype-xml"></i> XML
-                                        </a>
-                                        <?php if ($rolUsuario !== 'Invitado'): ?>
-                                            <a href="caso_editar.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-outline-warning">
-                                                <i class="bi bi-pencil-square"></i> Editar
-                                            </a>
-                                        <?php endif; ?>
-                                        <?php if ($rolUsuario !== 'Invitado' && $rolUsuario !== 'Editor'): ?>
-                                            <a href="lista_casos.php?eliminar=<?= (int)$row['id'] ?>&amp;csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro?');">
-                                                <i class="bi bi-trash"></i> Eliminar
-                                            </a>
-                                        <?php endif; ?>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
-    
-<?php if ($total_paginas > 1): ?>
-    <?php 
-        // Generar el fragmento de URL extra si hay un filtro aplicado
-        $url_filtro = !empty($filtro_departamento) ? '&departamento=' . urlencode($filtro_departamento) : ''; 
+        <?php endif; ?>
+    </section>
+
+    <?php if ($total_paginas > 1):
+        $url_filtro = $filtro_departamento !== '' ? '&departamento=' . urlencode($filtro_departamento) : '';
     ?>
-    <nav aria-label="Navegación de páginas de casos clínicos" class="mt-4">
-        <ul class="pagination justify-content-center shadow-sm">
-            
-            <li class="page-item <?= ($pagina_actual <= 1) ? 'disabled' : '' ?>">
-                <a class="page-link" href="?p=<?= $pagina_actual - 1 ?><?= $url_filtro ?>"><i class="bi bi-chevron-left"></i> Anterior</a>
-            </li>
-
-            <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
-                <li class="page-item <?= ($i === $pagina_actual) ? 'active' : '' ?>">
-                    <a class="page-link" href="?p=<?= $i ?><?= $url_filtro ?>"><?= $i ?></a>
+        <nav aria-label="Páginas de casos clínicos" class="mt-4">
+            <ul class="pagination hv-paginacion justify-content-center flex-wrap">
+                <li class="page-item <?= ($pagina_actual <= 1) ? 'disabled' : '' ?>">
+                    <a class="page-link" href="?p=<?= $pagina_actual - 1 ?><?= h($url_filtro) ?>" aria-label="Página anterior"><i class="bi bi-chevron-left"></i></a>
                 </li>
-            <?php endfor; ?>
-
-            <li class="page-item <?= ($pagina_actual >= $total_paginas) ? 'disabled' : '' ?>">
-                <a class="page-link" href="?p=<?= $pagina_actual + 1 ?><?= $url_filtro ?>">Siguiente <i class="bi bi-chevron-right"></i></a>
-            </li>
-            
-        </ul>
-    </nav>
-<?php endif; ?>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
+                <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                    <li class="page-item <?= ($i === $pagina_actual) ? 'active' : '' ?>">
+                        <a class="page-link" href="?p=<?= $i ?><?= h($url_filtro) ?>"<?= $i === $pagina_actual ? ' aria-current="page"' : '' ?>><?= $i ?></a>
+                    </li>
+                <?php endfor; ?>
+                <li class="page-item <?= ($pagina_actual >= $total_paginas) ? 'disabled' : '' ?>">
+                    <a class="page-link" href="?p=<?= $pagina_actual + 1 ?><?= h($url_filtro) ?>" aria-label="Página siguiente"><i class="bi bi-chevron-right"></i></a>
+                </li>
+            </ul>
+        </nav>
+    <?php endif; ?>
+</main>
+<?php hv_pie(); ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Descargar el JSON de un caso desde la lista
     document.querySelectorAll('.btn-descargar-json').forEach(boton => {
         boton.addEventListener('click', function () {
             try {
-                const rawJson = this.getAttribute('data-json');
-                const objetoJson = JSON.parse(rawJson);
-                
+                const objetoJson = JSON.parse(this.getAttribute('data-json'));
                 let tituloCaso = this.getAttribute('data-titulo') || 'caso_clinico';
-                tituloCaso = tituloCaso.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, '_');
+                tituloCaso = tituloCaso.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/gi, '_');
 
-                const jsonFormateado = JSON.stringify(objetoJson, null, 4);
-                const blob = new Blob([jsonFormateado], { type: 'application/json' });
-                
+                const blob = new Blob([JSON.stringify(objetoJson, null, 4)], { type: 'application/json' });
                 const enlaceTemporal = document.createElement('a');
                 enlaceTemporal.href = URL.createObjectURL(blob);
                 enlaceTemporal.download = `caso_${tituloCaso}.json`;
-
                 document.body.appendChild(enlaceTemporal);
                 enlaceTemporal.click();
                 document.body.removeChild(enlaceTemporal);
                 URL.revokeObjectURL(enlaceTemporal.href);
-
             } catch (error) {
                 console.error("Error al procesar el archivo JSON:", error);
-                alert("Ocurrió un error inesperado al estructurar el archivo de descarga.");
+                alert("Ocurrió un error inesperado al preparar la descarga.");
             }
         });
     });

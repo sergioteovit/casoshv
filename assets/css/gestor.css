@@ -468,3 +468,20 @@ section[id] { scroll-margin-top: 5.5rem; }
     font-family: var(--hv-fuente-titulos); font-weight: 800;
 }
 .hv-figura-espera { max-height: 13rem; width: auto; animation: hv-flotar 4s ease-in-out infinite; }
+
+/* Lista de casos */
+.hv-chip-pendiente { background: #ffece8; color: #c0432f; }
+.hv-acciones .btn { border-radius: 0; padding-inline: .6rem; border-color: var(--hv-borde); }
+.hv-acciones .btn:first-child { border-radius: 999px 0 0 999px; }
+.hv-acciones .btn:last-child { border-radius: 0 999px 999px 0; }
+.hv-paginacion { gap: .3rem; }
+.hv-paginacion .page-link {
+    border-radius: 999px !important; border: 1px solid var(--hv-borde);
+    color: var(--hv-morado); font-weight: 700; min-width: 2.4rem; text-align: center;
+}
+.hv-paginacion .page-item.active .page-link { background: var(--hv-morado); border-color: var(--hv-morado); color: #fff; }
+.hv-paginacion .page-link:hover { background: var(--hv-morado-claro); }
+.hv-paginacion .page-item.disabled .page-link { color: var(--hv-texto-suave); background: transparent; }
+
+/* Mi perfil */
+.hv-avatar-grande { width: 5.5rem; height: 5.5rem; font-size: 1.9rem; box-shadow: var(--hv-sombra); }

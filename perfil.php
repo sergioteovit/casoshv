@@ -86,162 +86,134 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
 $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
 $stmt->execute([$_SESSION['usuario_id']]);
 $perfil = $stmt->fetch(PDO::FETCH_ASSOC);
+
+require_once __DIR__ . '/plantilla.php';
+
+$nombreCompleto = trim(($perfil['nombre'] ?? '') . ' ' . ($perfil['apellidos'] ?? ''));
+
+hv_encabezado('Mi perfil');
+hv_cabecera('Mi perfil', 'Tus datos de contacto y tu contraseña.', 'bi-person-gear');
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Mi Perfil</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-</head>
-<body class="bg-light">
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Mi Perfil</h5>
-                    <a href="lista_casos.php" class="btn btn-sm btn-light">Volver al inicio</a>
+<main class="container pb-5 position-relative">
+    <?php if (isset($mensaje)): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i><?= h($mensaje) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    <?php endif; ?>
+    <?php if (isset($_GET['msg']) && $_GET['msg'] === 'perfil_pass_ok'): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>Perfil y contraseña actualizados correctamente.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    <?php endif; ?>
+    <?php if (isset($error_perfil)): ?>
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i><?= h($error_perfil) ?>
+        </div>
+    <?php endif; ?>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <section class="hv-tarjeta p-4 text-center hv-aparecer">
+                <span class="hv-avatar hv-avatar-grande mb-3" aria-hidden="true"><?= h(hv_iniciales($nombreCompleto !== '' ? $nombreCompleto : ($perfil['usuario'] ?? ''))) ?></span>
+                <h2 class="h5 mb-1"><?= h($nombreCompleto) ?></h2>
+                <div class="text-muted mb-2">@<?= h($perfil['usuario'] ?? '') ?></div>
+                <div class="mb-3"><?= hv_rol($perfil['rol'] ?? '') ?></div>
+                <?php if (!empty($perfil['departamento'])): ?>
+                    <div class="small text-muted"><i class="bi bi-building me-1"></i><?= h($perfil['departamento']) ?></div>
+                <?php endif; ?>
+                <?php if (($perfil['rol'] ?? '') === 'Invitado'): ?>
+                    <div class="alert alert-warning small mt-3 mb-0 text-start">
+                        <i class="bi bi-hourglass-split me-1"></i>Tu cuenta espera la activación de un administrador.
+                    </div>
+                <?php endif; ?>
+            </section>
+        </div>
+
+        <div class="col-lg-8">
+            <form method="POST" class="hv-aparecer hv-aparecer-2">
+                <input type="hidden" name="csrf_token" value="<?= h(hv_token_csrf()) ?>">
+
+                <section class="hv-tarjeta mb-4">
+                    <div class="hv-tarjeta-encabezado"><i class="bi bi-person-vcard me-2 text-primary"></i>Datos personales</div>
+                    <div class="p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small" for="campoNombre">Nombre</label>
+                                <input type="text" name="nombre" id="campoNombre" class="form-control" value="<?= h($perfil['nombre'] ?? '') ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small" for="campoApellidos">Apellidos</label>
+                                <input type="text" name="apellidos" id="campoApellidos" class="form-control" value="<?= h($perfil['apellidos'] ?? '') ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small" for="campoCorreo">Correo electrónico</label>
+                                <input type="email" name="correo" id="campoCorreo" class="form-control" value="<?= h($perfil['correo'] ?? '') ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small" for="campoTelefono">Teléfono celular</label>
+                                <input type="text" name="telefono" id="campoTelefono" class="form-control" value="<?= h($perfil['telefono'] ?? '') ?>">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold small" for="campoDepartamento">Departamento de adscripción</label>
+                                <input type="text" name="departamento" id="campoDepartamento" class="form-control" value="<?= h($perfil['departamento'] ?? '') ?>">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="hv-tarjeta mb-4">
+                    <div class="hv-tarjeta-encabezado"><i class="bi bi-shield-lock me-2 text-primary"></i>Cambiar contraseña</div>
+                    <div class="p-4">
+                        <p class="text-muted small">Deja estos campos en blanco si no quieres cambiar tu contraseña.</p>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-bold small" for="password_actual">Contraseña actual</label>
+                                <div class="input-group">
+                                    <input type="password" name="password_actual" id="password_actual" class="form-control" autocomplete="current-password">
+                                    <button class="btn btn-outline-secondary" type="button" data-mostrar="password_actual" title="Mostrar contraseña" aria-label="Mostrar u ocultar la contraseña"><i class="bi bi-eye"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small" for="nueva_password">Nueva contraseña</label>
+                                <div class="input-group">
+                                    <input type="password" name="nueva_password" id="nueva_password" class="form-control" autocomplete="new-password">
+                                    <button class="btn btn-outline-secondary" type="button" data-mostrar="nueva_password" title="Mostrar contraseña" aria-label="Mostrar u ocultar la contraseña"><i class="bi bi-eye"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small" for="confirmar_password">Confirmar la nueva contraseña</label>
+                                <div class="input-group">
+                                    <input type="password" name="confirmar_password" id="confirmar_password" class="form-control" autocomplete="new-password">
+                                    <button class="btn btn-outline-secondary" type="button" data-mostrar="confirmar_password" title="Mostrar contraseña" aria-label="Mostrar u ocultar la contraseña"><i class="bi bi-eye"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="d-flex flex-wrap gap-2 justify-content-end">
+                    <a href="<?= ($perfil['rol'] ?? '') === 'Invitado' ? 'cuenta_pendiente.php' : 'lista_casos.php' ?>" class="btn btn-outline-secondary">Volver</a>
+                    <button type="submit" name="accion" value="actualizar_perfil" class="btn btn-primary"><i class="bi bi-save me-1"></i>Guardar cambios</button>
                 </div>
-                <div class="card-body p-4">
-                    <?php if(isset($mensaje)): ?>
-                        <div class="alert alert-success"><?= $mensaje ?></div>
-                    <?php endif; ?>
-                    
-                    <!-- ALERTA DE ÉXITO -->
-                    <?php if (isset($_GET['msg']) && $_GET['msg'] === 'perfil_pass_ok'): ?>
-                        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-                            <i class="bi bi-check-circle-fill me-2"></i> Perfil y contraseña actualizados correctamente.
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    <?php endif; ?>
-
-                    <!-- ALERTA DE ERROR -->
-                    <?php if (isset($error_perfil)): ?>
-                        <div class="alert alert-danger shadow-sm">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i> <?= htmlspecialchars($error_perfil) ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <form method="POST">
-                        <input type="hidden" name="csrf_token" value="<?= hv_token_csrf() ?>">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted">Usuario (Solo lectura)</label>
-                                <input type="text" class="form-control bg-light" value="<?= htmlspecialchars($perfil['usuario']) ?>" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted">Rol en el sistema (Solo lectura)</label>
-                                <input type="text" class="form-control bg-light fw-bold text-primary" value="<?= htmlspecialchars($perfil['rol']) ?>" readonly>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Nombre</label>
-                                <input type="text" name="nombre" class="form-control" value="<?= htmlspecialchars($perfil['nombre']) ?>" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Apellidos</label>
-                                <input type="text" name="apellidos" class="form-control" value="<?= htmlspecialchars($perfil['apellidos']) ?>" required>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Correo Electrónico</label>
-                                <input type="email" name="correo" class="form-control" value="<?= htmlspecialchars($perfil['correo']) ?>" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Teléfono Celular</label>
-                                <input type="text" name="telefono" class="form-control" value="<?= htmlspecialchars($perfil['telefono']) ?>">
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label">Departamento de Adscripción</label>
-                            <input type="text" name="departamento" class="form-control" value="<?= htmlspecialchars($perfil['departamento']) ?>">
-                        </div>
-                        
-                        <hr class="my-4 text-muted">
-        
-                        <h5 class="mb-3 text-secondary">
-                            <i class="bi bi-shield-lock me-2"></i>Cambiar Contraseña
-                        </h5>
-                        <p class="text-muted small mb-3">Deja estos campos en blanco si no deseas cambiar tu contraseña actual.</p>
-
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label fw-bold">Contraseña Actual</label>
-                                <div class="input-group">
-                                    <input type="password" name="password_actual" id="password_actual" class="form-control" placeholder="Ingresa tu contraseña actual">
-                                    <button class="btn btn-outline-secondary btn-toggle-pass" type="button" data-target="password_actual">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Nueva Contraseña</label>
-                                <div class="input-group">
-                                    <input type="password" name="nueva_password" id="nueva_password" class="form-control" placeholder="Escribe la nueva contraseña">
-                                    <button class="btn btn-outline-secondary btn-toggle-pass" type="button" data-target="nueva_password">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 mb-4">
-                                <label class="form-label fw-bold">Confirmar Nueva Contraseña</label>
-                                <div class="input-group">
-                                    <input type="password" name="confirmar_password" id="confirmar_password" class="form-control" placeholder="Repite la nueva contraseña">
-                                    <button class="btn btn-outline-secondary btn-toggle-pass" type="button" data-target="confirmar_password">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!--button type="submit" class="btn btn-primary w-100">Actualizar Información</button-->
-                        <button type="submit" name="accion" value="actualizar_perfil" class="btn btn-primary shadow-sm">
-                            <i class="bi bi-save me-1"></i> Actualizar Información
-                        </button>
-                    </form>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
-</div>
-
+</main>
+<?php hv_pie(); ?>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Buscamos todos los botones de mostrar/ocultar contraseña
-    const botonesOjo = document.querySelectorAll('.btn-toggle-pass');
-    
-    botonesOjo.forEach(boton => {
-        boton.addEventListener('click', function() {
-            // Obtenemos el ID del input que este botón debe controlar
-            const targetId = this.getAttribute('data-target');
-            const input = document.getElementById(targetId);
-            const icono = this.querySelector('i');
-            
-            // Alternamos entre tipo 'password' y 'text'
-            if (input.type === 'password') {
-                input.type = 'text';
-                // Cambiamos el ícono a ojo tachado
-                icono.classList.remove('bi-eye');
-                icono.classList.add('bi-eye-slash');
-            } else {
-                input.type = 'password';
-                // Cambiamos el ícono a ojo normal
-                icono.classList.remove('bi-eye-slash');
-                icono.classList.add('bi-eye');
-            }
+    // Mostrar u ocultar contraseñas: botones con data-mostrar="id-del-campo"
+    document.querySelectorAll('[data-mostrar]').forEach(boton => {
+        boton.addEventListener('click', () => {
+            const campo = document.getElementById(boton.dataset.mostrar);
+            const icono = boton.querySelector('i');
+            const ver = campo.type === 'password';
+            campo.type = ver ? 'text' : 'password';
+            icono.classList.toggle('bi-eye', !ver);
+            icono.classList.toggle('bi-eye-slash', ver);
         });
     });
-});
 </script>
-    
 </body>
 </html>
