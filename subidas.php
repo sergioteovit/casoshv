@@ -108,4 +108,37 @@ function hv_subidas_guardar(array $archivos)
     return $rutas;
 }
 
+// Borra de uploads/ los archivos de un caso eliminado. $rutasJson es el valor de rutas_archivos
+// (lista JSON de rutas "uploads/<nombre>"). Solo se borran archivos directamente dentro de uploads/,
+// con nombre sin carpetas ni "..", y nunca .htaccess. Devuelve [borrados, no encontrados, fallidos].
+function hv_subidas_borrar($rutasJson)
+{
+    $rutas = json_decode((string)$rutasJson, true);
+    $resultado = [0, 0, 0];
+    if (!is_array($rutas)) {
+        return $resultado;
+    }
+
+    $carpeta = realpath(__DIR__ . '/uploads');
+    foreach ($rutas as $ruta) {
+        if (!is_string($ruta) || !preg_match('#^uploads/([A-Za-z0-9][A-Za-z0-9._-]*)$#', $ruta, $m) || strtolower($m[1]) === '.htaccess') {
+            error_log('[casoshv] Ruta de adjunto no válida, no se borra: ' . (is_string($ruta) ? $ruta : gettype($ruta)));
+            $resultado[2]++;
+            continue;
+        }
+        $archivo = __DIR__ . '/uploads/' . $m[1];
+        if (!is_file($archivo)) {
+            $resultado[1]++;
+            continue;
+        }
+        if ($carpeta === false || dirname(realpath($archivo)) !== $carpeta || !@unlink($archivo)) {
+            error_log('[casoshv] No se pudo borrar el adjunto ' . $ruta);
+            $resultado[2]++;
+            continue;
+        }
+        $resultado[0]++;
+    }
+    return $resultado;
+}
+
 const HV_SUBIDAS_ERROR_CARPETA = 'No se pudieron guardar los archivos adjuntos en el servidor (la carpeta uploads/ no permite escribir). No se guardaron los cambios.';

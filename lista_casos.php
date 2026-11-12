@@ -29,9 +29,22 @@ if (isset($_GET['eliminar'])) {
 
     $idEliminar = intval($_GET['eliminar']);
     try {
+        // Rutas de los adjuntos antes de borrar el registro; los archivos se borran después de que
+        // la base confirme el borrado (si fallara, el caso y sus archivos se quedan como estaban)
+        $stmtRutas = $pdo->prepare("SELECT rutas_archivos FROM casos_clinicos WHERE id = :id");
+        $stmtRutas->execute([':id' => $idEliminar]);
+        $rutasAdjuntos = $stmtRutas->fetchColumn();
+
         $stmt = $pdo->prepare("DELETE FROM casos_clinicos WHERE id = :id");
         $stmt->execute([':id' => $idEliminar]);
-        header("Location: lista_casos.php?msg=deleted");
+
+        $parametros = 'msg=deleted';
+        if ($stmt->rowCount() > 0 && $rutasAdjuntos) {
+            require_once __DIR__ . '/subidas.php';
+            [$borrados, $noEncontrados, $fallidos] = hv_subidas_borrar($rutasAdjuntos);
+            $parametros .= '&adjuntos=' . (int)$borrados . ($fallidos > 0 ? '&adjuntos_fallidos=' . (int)$fallidos : '');
+        }
+        header("Location: lista_casos.php?" . $parametros);
         exit;
     } catch(Exception $e) {
         $error = "Error al eliminar el registro: " . hv_error_interno($e);
@@ -104,6 +117,17 @@ $mensajes = [
     'deleted' => ['success', 'bi-trash', 'El caso clínico se eliminó de la base de datos.'],
 ];
 $mensaje = $mensajes[$_GET['msg'] ?? ''] ?? null;
+// Al eliminar: cuántos archivos adjuntos se borraron y si alguno no se pudo borrar
+if (($_GET['msg'] ?? '') === 'deleted' && isset($_GET['adjuntos'])) {
+    $numAdjuntos = (int)$_GET['adjuntos'];
+    if ($numAdjuntos > 0) {
+        $mensaje[2] .= ' También se borraron ' . ($numAdjuntos === 1 ? '1 archivo adjunto.' : $numAdjuntos . ' archivos adjuntos.');
+    }
+    if ((int)($_GET['adjuntos_fallidos'] ?? 0) > 0) {
+        $mensaje[0] = 'warning';
+        $mensaje[2] .= ' No se pudieron borrar ' . (int)$_GET['adjuntos_fallidos'] . ' archivo(s) adjunto(s); revisa la carpeta uploads/ en el servidor.';
+    }
+}
 $esAdmin = $rolUsuario === 'Administrador';
 
 hv_encabezado('Casos clínicos', 'casos');
