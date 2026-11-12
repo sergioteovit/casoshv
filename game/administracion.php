@@ -12,6 +12,7 @@ if (!isset($_SESSION['UserId'])) {
 
 require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/estadisticas_comun.php';
+require_once __DIR__ . '/detalle_alumno.php';
 
 header('Cache-Control: no-store');
 
@@ -127,7 +128,34 @@ try {
         ")->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    if ($seccion === 'jugadores') {
+    // Detalle de una cuenta (con o sin grupo): retos, casos clínicos y conversación con el paciente
+    $alumnoVer = ($seccion === 'jugadores' && is_string($_GET['alumno'] ?? null)) ? $_GET['alumno'] : '';
+    if ($alumnoVer !== '') {
+        $stmt = $conn->prepare("
+            SELECT u.UserId, u.Username, u.Email, r.RoleName, u.LastLogin, u.CreatedAt,
+                   COALESCE(s.TotalPuntos, 0) AS TotalPuntos,
+                   COALESCE(s.TotalEstrellas, 0) AS TotalEstrellas,
+                   COALESCE(s.RetosCompletados, 0) AS RetosCompletados,
+                   COALESCE(s.TotalInsignias, 0) AS TotalInsignias
+            FROM Users u
+            JOIN Roles r ON r.RoleId = u.RoleId
+            LEFT JOIN EstResumenJugador s ON s.UserId = u.UserId
+            WHERE u.UserId = ?
+        ");
+        $stmt->execute([$alumnoVer]);
+        $datos['alumno'] = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($datos['alumno']) {
+            $stmt = $conn->prepare("
+                SELECT g.Nombre FROM EstGrupoAlumnos ga JOIN EstGrupos g ON g.GrupoId = ga.GrupoId
+                WHERE ga.UserId = ? ORDER BY g.Nombre
+            ");
+            $stmt->execute([$alumnoVer]);
+            $datos['grupos'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            $datos['retos'] = est_retos_alumno($conn, $alumnoVer);
+            $datos['casos'] = est_casos_alumno($conn, $alumnoVer);
+        }
+        $datos['busqueda'] = trim((string)($_GET['q'] ?? ''));
+    } elseif ($seccion === 'jugadores') {
         $busqueda = trim((string)($_GET['q'] ?? ''));
         $patron = '%' . addcslashes($busqueda, '%_\\') . '%';
 
@@ -280,6 +308,53 @@ $iconosSeccion = ['resumen' => 'bi-speedometer2', 'jugadores' => 'bi-person-line
             <?php endif; ?>
         </section>
 
+    <?php elseif ($seccion === 'jugadores' && $alumnoVer !== ''): ?>
+        <?php $volverJugadores = 'administracion.php?seccion=jugadores' . ($datos['busqueda'] !== '' ? '&q=' . urlencode($datos['busqueda']) : ''); ?>
+        <a href="<?php echo h($volverJugadores); ?>" class="btn btn-light btn-sm mb-3 shadow-sm"><i class="bi bi-arrow-left me-1"></i>Volver a jugadores</a>
+
+        <?php if (!$datos['alumno']): ?>
+            <section class="hv-tarjeta"><div class="hv-vacio"><i class="bi bi-person-x"></i><div class="fw-bold">No se encontró la cuenta.</div></div></section>
+        <?php else: ?>
+            <?php $a = $datos['alumno']; ?>
+            <section class="hv-tarjeta p-3 p-md-4 mb-4 d-flex flex-wrap align-items-center gap-3">
+                <span class="hv-avatar" style="width:3.5rem;height:3.5rem;font-size:1.2rem"><?php echo h(hv_iniciales($a['Username'])); ?></span>
+                <div class="me-auto">
+                    <div class="hv-titulo fs-4"><?php echo h($a['Username']); ?></div>
+                    <div class="small text-muted"><?php echo h($a['Email']); ?></div>
+                </div>
+                <div class="small d-flex flex-column gap-1">
+                    <div><span class="hv-chip"><?php echo h($a['RoleName']); ?></span></div>
+                    <div class="text-muted">Último acceso: <?php echo h(fecha_hora($a['LastLogin'])) ?: 'sin registro'; ?></div>
+                    <div class="text-muted">Grupos: <?php echo $datos['grupos'] ? h(implode(', ', $datos['grupos'])) : 'ninguno'; ?></div>
+                </div>
+            </section>
+
+            <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
+                <?php
+                $resumenAlumno = [
+                    ['Puntos', $a['TotalPuntos'], 'bi-lightning-charge', ''],
+                    ['Estrellas', $a['TotalEstrellas'], 'bi-star', 'hv-icono-oro'],
+                    ['Retos completados', $a['RetosCompletados'], 'bi-flag', 'hv-icono-turquesa'],
+                    ['Insignias', $a['TotalInsignias'], 'bi-award', 'hv-icono-coral'],
+                ];
+                ?>
+                <?php foreach ($resumenAlumno as $d): ?>
+                    <div class="col">
+                        <div class="hv-tarjeta hv-dato h-100">
+                            <span class="hv-icono <?php echo h($d[3]); ?>"><i class="bi <?php echo h($d[2]); ?>"></i></span>
+                            <div>
+                                <div class="hv-numero"><?php echo number_format((int)$d[1]); ?></div>
+                                <div class="hv-rotulo"><?php echo h($d[0]); ?></div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <?php hv_tarjeta_retos($datos['retos']); ?>
+            <?php hv_tarjeta_casos($datos['casos'], 'Casos clínicos y conversación con el paciente', 'Sin casos clínicos con respuestas guardadas.', 'casos-alumno'); ?>
+        <?php endif; ?>
+
     <?php elseif ($seccion === 'jugadores'): ?>
         <form method="GET" class="hv-tarjeta p-3 mb-3 d-flex flex-wrap gap-2">
             <input type="hidden" name="seccion" value="jugadores">
@@ -310,6 +385,7 @@ $iconosSeccion = ['resumen' => 'bi-speedometer2', 'jugadores' => 'bi-person-line
                                 <th class="col-numero">Puntos anteriores</th>
                                 <th>Último acceso</th>
                                 <th>Posiciones</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -356,6 +432,12 @@ $iconosSeccion = ['resumen' => 'bi-speedometer2', 'jugadores' => 'bi-person-line
                                                 <button type="submit" class="btn btn-outline-secondary btn-sm"><?php echo (int)$j['Excluir'] ? 'Incluir' : 'Excluir'; ?></button>
                                             </form>
                                         <?php endif; ?>
+                                    </td>
+                                    <td class="text-end">
+                                        <a class="btn btn-outline-primary btn-sm text-nowrap"
+                                           href="administracion.php?seccion=jugadores&amp;alumno=<?php echo h(urlencode($j['UserId'])); ?><?php echo $datos['busqueda'] !== '' ? '&amp;q=' . h(urlencode($datos['busqueda'])) : ''; ?>">
+                                            <i class="bi bi-eye me-1"></i>Ver detalle
+                                        </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

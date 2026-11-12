@@ -12,6 +12,7 @@ if (!isset($_SESSION['UserId'])) {
 
 require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/estadisticas_comun.php';
+require_once __DIR__ . '/detalle_alumno.php';
 
 header('Cache-Control: no-store');
 
@@ -226,25 +227,8 @@ try {
                 sin_acceso();
             }
 
-            $stmt = $conn->prepare("
-                SELECT t.Titulo, t.Tipo, t.Sistema, r.MejorPuntaje, r.MejorEstrellas, r.Intentos, r.Victorias, r.ActualizadoEn
-                FROM EstResultadosReto r
-                JOIN EstRetos t ON t.IdReto = r.IdReto
-                WHERE r.UserId = ?
-                ORDER BY r.ActualizadoEn DESC
-            ");
-            $stmt->execute([$alumnoVer]);
-            $retosAlumno = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $stmt = $conn->prepare("
-                SELECT c.*, t.Titulo
-                FROM EstRespuestasCaso c
-                LEFT JOIN EstRetos t ON t.IdReto = CONCAT('Caso_', c.NumeroExpediente)
-                WHERE c.UserId = ?
-                ORDER BY c.ActualizadoEn DESC
-            ");
-            $stmt->execute([$alumnoVer]);
-            $respuestasAlumno = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $retosAlumno = est_retos_alumno($conn, $alumnoVer);
+            $respuestasAlumno = est_casos_alumno($conn, $alumnoVer);
         } else {
             $stmt = $conn->prepare("
                 SELECT u.UserId, u.Username, ga.UnidoEn,
@@ -297,16 +281,6 @@ try {
 }
 
 $csrf = h(hv_token_csrf());
-$camposRespuesta = [
-    'Interrogatorio'         => 'Interrogatorio',
-    'DescripcionExploracion' => 'Exploración',
-    'PresentacionCaso'       => 'Presentación del caso',
-    'Paraclinicos'           => 'Paraclínicos',
-    'DiagnosticoPrincipal'   => 'Diagnóstico principal',
-    'Tratamiento'            => 'Tratamiento',
-    'Metacognicion'          => 'Metacognición',
-    'Retroalimentacion'      => 'Retroalimentación',
-];
 require_once __DIR__ . '/plantilla.php';
 hv_encabezado('Grupos', 'grupos');
 
@@ -352,75 +326,8 @@ if ($alumnoActual) {
             <?php endforeach; ?>
         </div>
 
-        <section class="hv-tarjeta mb-4">
-            <div class="hv-tarjeta-encabezado"><i class="bi bi-flag me-2 text-primary"></i>Retos</div>
-            <?php if (!$retosAlumno): ?>
-                <div class="hv-vacio"><i class="bi bi-controller"></i><div class="fw-bold">Sin retos registrados.</div></div>
-            <?php else: ?>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle hv-tabla">
-                        <thead>
-                            <tr>
-                                <th>Reto</th>
-                                <th>Sistema</th>
-                                <th class="col-numero">Mejor puntaje</th>
-                                <th>Nivel</th>
-                                <th class="col-numero">Intentos</th>
-                                <th class="col-numero">Victorias</th>
-                                <th>Última vez</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($retosAlumno as $reto): ?>
-                                <tr>
-                                    <td>
-                                        <div class="fw-semibold"><?php echo h($reto['Titulo']); ?></div>
-                                        <span class="hv-chip<?php echo $reto['Tipo'] === 'caso' ? '' : ' hv-chip-turquesa'; ?>"><?php echo $reto['Tipo'] === 'caso' ? 'Caso clínico' : 'Minijuego'; ?></span>
-                                    </td>
-                                    <td><?php echo h(est_nombre_sistema($reto['Sistema'])); ?></td>
-                                    <td class="col-numero fw-bold"><?php echo number_format((int)$reto['MejorPuntaje']); ?></td>
-                                    <td><?php echo hv_nivel($reto['MejorEstrellas']); ?></td>
-                                    <td class="col-numero"><?php echo number_format((int)$reto['Intentos']); ?></td>
-                                    <td class="col-numero"><?php echo number_format((int)$reto['Victorias']); ?></td>
-                                    <td class="text-muted small"><?php echo h(fecha_corta($reto['ActualizadoEn'])); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </section>
-
-        <section class="hv-tarjeta">
-            <div class="hv-tarjeta-encabezado"><i class="bi bi-journal-medical me-2 text-primary"></i>Respuestas escritas en casos clínicos</div>
-            <?php if (!$respuestasAlumno): ?>
-                <div class="hv-vacio"><i class="bi bi-journal"></i><div class="fw-bold">Sin respuestas registradas.</div></div>
-            <?php else: ?>
-                <div class="accordion accordion-flush" id="respuestas">
-                    <?php foreach ($respuestasAlumno as $i => $respuesta): ?>
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#respuesta<?php echo $i; ?>" aria-expanded="false" aria-controls="respuesta<?php echo $i; ?>">
-                                    <span class="me-2 fw-semibold"><?php echo h($respuesta['Titulo'] ?? ('Expediente ' . $respuesta['NumeroExpediente'])); ?></span>
-                                    <?php if ((int)$respuesta['Resuelto']): ?><span class="hv-chip hv-chip-turquesa me-2">Resuelto</span><?php endif; ?>
-                                    <span class="text-muted small"><?php echo h(fecha_corta($respuesta['ActualizadoEn'])); ?></span>
-                                </button>
-                            </h3>
-                            <div id="respuesta<?php echo $i; ?>" class="accordion-collapse collapse" data-bs-parent="#respuestas">
-                                <div class="accordion-body">
-                                    <?php foreach ($camposRespuesta as $columna => $etiqueta): ?>
-                                        <?php if (trim((string)$respuesta[$columna]) !== ''): ?>
-                                            <h4 class="h6 mt-3 text-primary"><?php echo h($etiqueta); ?></h4>
-                                            <p class="mb-0"><?php echo nl2br(h($respuesta[$columna])); ?></p>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </section>
+        <?php hv_tarjeta_retos($retosAlumno); ?>
+        <?php hv_tarjeta_casos($respuestasAlumno, "Casos clínicos y conversación con el paciente", "Sin casos clínicos con respuestas guardadas.", "casos-alumno"); ?>
 
     <?php elseif ($grupoActual): ?>
         <a href="mis_grupos.php" class="btn btn-light btn-sm mb-3 shadow-sm"><i class="bi bi-arrow-left me-1"></i>Volver a los grupos</a>

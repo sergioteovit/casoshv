@@ -310,6 +310,21 @@ h1, h2, h3, h4, h5, h6, .hv-titulo {
 }
 .hv-chip-turquesa { background: var(--hv-turquesa-claro); color: #0c7a73; }
 
+/* Conversación con el paciente virtual (detalle de casos) */
+.hv-chat {
+    display: flex; flex-direction: column; gap: .6rem;
+    background: var(--hv-fondo); border: 1px solid var(--hv-borde); border-radius: var(--hv-radio);
+    padding: 1rem; max-height: 32rem; overflow-y: auto;
+}
+.hv-msg { max-width: 82%; padding: .55rem .85rem; border-radius: 1rem; box-shadow: 0 .1rem .3rem rgba(42, 21, 82, .06); }
+.hv-msg-autor { font-size: .75rem; font-weight: 800; margin-bottom: .1rem; }
+.hv-msg-texto { white-space: pre-wrap; overflow-wrap: anywhere; }
+.hv-msg-alumno { align-self: flex-end; background: var(--hv-morado-claro); border-bottom-right-radius: .3rem; }
+.hv-msg-alumno .hv-msg-autor { color: var(--hv-morado); text-align: right; }
+.hv-msg-paciente { align-self: flex-start; background: #fff; border: 1px solid var(--hv-turquesa-claro); border-bottom-left-radius: .3rem; }
+.hv-msg-paciente .hv-msg-autor { color: #0c7a73; }
+.hv-msg-otro { align-self: center; max-width: 95%; background: transparent; box-shadow: none; color: var(--hv-texto-suave); font-size: .85rem; text-align: center; }
+
 /* Lista de logros */
 .hv-logros { list-style: none; margin: 0; padding: 0; }
 .hv-logros li { display: flex; gap: .75rem; padding: .85rem 1.25rem; border-bottom: 1px solid var(--hv-borde); }

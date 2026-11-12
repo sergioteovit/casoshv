@@ -5,7 +5,7 @@
 require_once __DIR__ . '/estadisticas_comun.php';
 
 // Subir este número al cambiar hv.css para que los navegadores no usen la copia anterior
-define('HV_VERSION_ESTILOS', '7');
+define('HV_VERSION_ESTILOS', '8');
 
 function hv_iniciales($nombre)
 {

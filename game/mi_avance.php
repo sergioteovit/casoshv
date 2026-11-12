@@ -12,6 +12,7 @@ if (!isset($_SESSION['UserId'])) {
 
 require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/estadisticas_comun.php';
+require_once __DIR__ . '/detalle_alumno.php';
 
 header('Cache-Control: no-store');
 
@@ -113,6 +114,9 @@ try {
     ");
     $stmt->execute([$userId]);
     $insignias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Lo que escribió en cada caso clínico, con la conversación con el paciente
+    $casos = est_casos_alumno($conn, $userId);
 } catch (Throwable $e) {
     error_log('[mi_avance] ' . $e->getMessage());
     http_response_code(500);
@@ -195,6 +199,8 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
                     </div>
                 <?php endif; ?>
             </section>
+
+            <?php hv_tarjeta_casos($casos, 'Mis casos clínicos', 'Todavía no hay casos clínicos con respuestas guardadas.', 'mis-casos'); ?>
 
             <section class="hv-tarjeta">
                 <div class="hv-tarjeta-encabezado"><i class="bi bi-award me-2 text-primary"></i>Mis insignias</div>
