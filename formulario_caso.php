@@ -83,6 +83,9 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
     <?php endif; ?>
 
     <form id="formulario-caso">
+        <!-- Aviso de borrador guardado en este navegador -->
+        <div id="aviso-borrador"></div>
+
         <div class="row g-4">
             <!-- Índice de pasos (en celular, un menú desplegable) -->
             <div class="col-lg-3">
@@ -90,6 +93,11 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
                     <select class="form-select d-lg-none control-navegacion" id="selector-pasos" aria-label="Paso del formulario"></select>
                     <nav class="d-none d-lg-block" id="indice-pasos" aria-label="Pasos del formulario"></nav>
                     <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2 control-navegacion" id="btn-ver-todo"><i class="bi bi-list-ul me-1"></i>Ver todo</button>
+                    <!-- Datos mínimos que necesita el juego -->
+                    <details class="hv-listo-juego mt-3" id="listo-juego">
+                        <summary class="control-navegacion"><span class="fw-bold"><i class="bi bi-controller me-1"></i>Para el juego</span> <span class="hv-listo-conteo" id="listo-juego-conteo"></span></summary>
+                        <ul class="list-unstyled mb-0 mt-2" id="listo-juego-lista"></ul>
+                    </details>
                 </div>
             </div>
             <div class="col-lg-9">
@@ -836,12 +844,12 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
 
         <div class="hv-barra-guardar mt-5">
             <?php if ($modo === 'nuevo'): ?>
-            <a href="lista_casos.php" class="btn btn-outline-secondary btn-lg">Cancelar</a>
+            <a href="lista_casos.php" class="btn btn-outline-secondary btn-lg descartar-borrador">Cancelar</a>
             <button type="submit" class="btn btn-turquesa btn-lg flex-grow-1" id="btn-guardar">
                 <i class="bi bi-cloud-arrow-up me-2"></i>Guardar caso clínico
             </button>
             <?php elseif ($modo === 'editar'): ?>
-            <a href="lista_casos.php" class="btn btn-outline-secondary btn-lg">Descartar cambios</a>
+            <a href="lista_casos.php" class="btn btn-outline-secondary btn-lg descartar-borrador">Descartar cambios</a>
             <button type="submit" class="btn btn-turquesa btn-lg flex-grow-1" id="btn-guardar">
                 <i class="bi bi-cloud-arrow-up me-2"></i>Guardar cambios
             </button>
@@ -862,7 +870,23 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
 // Datos que entrega PHP: modo del formulario, id y caso guardado (vacío en un caso nuevo)
 const MODO_FORMULARIO = <?= json_encode($modo) ?>;
 const idCasoEditar = <?= (int)$idCaso ?>;
-const datosPrecargados = <?= $modo === 'nuevo' ? '{}' : hv_json_para_script($jsonExistente) ?>;
+const datosServidor = <?= $modo === 'nuevo' ? '{}' : hv_json_para_script($jsonExistente) ?>;
+
+// Borrador en este navegador (localStorage), por usuario y por caso. Si el autor eligió recuperarlo,
+// la página se recargó y el caso se carga desde el borrador en lugar de lo guardado en el servidor.
+const CLAVE_BORRADOR = 'hv_borrador_caso_<?= (int)($_SESSION['usuario_id'] ?? 0) ?>_' + (MODO_FORMULARIO === 'nuevo' ? 'nuevo' : idCasoEditar);
+let borradorRecuperado = null;
+let datosPrecargados = datosServidor;
+try {
+    if (MODO_FORMULARIO !== 'ver' && sessionStorage.getItem('hv_recuperar_borrador') === CLAVE_BORRADOR) {
+        sessionStorage.removeItem('hv_recuperar_borrador');
+        const guardado = JSON.parse(localStorage.getItem(CLAVE_BORRADOR) || 'null');
+        if (guardado && guardado.datos && typeof guardado.datos === 'object') {
+            borradorRecuperado = guardado;
+            datosPrecargados = guardado.datos;
+        }
+    }
+} catch (e) { /* almacenamiento no disponible: se usa lo guardado en el servidor */ }
 
 // =================================================================
 // APARTADOS DE LA HISTORIA CLÍNICA Y LA EXPLORACIÓN FÍSICA (plantilla para casos clínicos)
@@ -1549,16 +1573,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // CAPTURA Y ENVÍO DE DATOS
     // ==========================================
-    formulario.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (MODO_FORMULARIO === 'ver') return; // solo lectura
-
+    // Arma el objeto del caso tal como se guarda. Lo usan el guardado y el borrador del navegador
+    // (el borrador no incluye los archivos adjuntos nuevos, porque esos solo se suben al guardar).
+    construirDatosDelCaso = function (incluirAdjuntosNuevos) {
         const esNuevo = (MODO_FORMULARIO === 'nuevo');
         const datosParaEnviar = new FormData(formulario);
         const datosDelCaso = {};
-        
-        const btnSubmit = document.getElementById('btn-guardar');
-        const originalHTML = btnSubmit.innerHTML;
 
         // Aplicamos la misma lógica estructurada exacta del index.html para compilar los datos limpios
         for (let [key, value] of datosParaEnviar.entries()) {
@@ -1614,10 +1634,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 lista.forEach(nombre => { if (!nombresAdjuntos.includes(nombre)) nombresAdjuntos.push(nombre); });
             }
         });
-        archivosLaboratorio.forEach(f => nombresAdjuntos.push(f.name));
+        if (incluirAdjuntosNuevos) archivosLaboratorio.forEach(f => nombresAdjuntos.push(f.name));
         if (nombresAdjuntos.length > 0) {
             datosDelCaso["archivos_adjuntos"] = nombresAdjuntos;
         }
+        return datosDelCaso;
+    };
+
+    formulario.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (MODO_FORMULARIO === 'ver') return; // solo lectura
+
+        const esNuevo = (MODO_FORMULARIO === 'nuevo');
+        const datosDelCaso = construirDatosDelCaso(true);
+        const btnSubmit = document.getElementById('btn-guardar');
+        const originalHTML = btnSubmit.innerHTML;
 
         // Animación de carga
         btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + (esNuevo ? 'Guardando...' : 'Actualizando Caso...');
@@ -1643,6 +1674,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json())
         .then(data => {
             if(data.status === 'success') {
+                detenerBorrador();
                 btnSubmit.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> ' + (esNuevo ? '¡Guardado con éxito!' : '¡Cambios guardados!');
                 setTimeout(() => {
                     window.location.href = esNuevo ? "lista_casos.php?msg=success" : "lista_casos.php?msg=updated";
@@ -1664,7 +1696,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // CARGA DEL CASO GUARDADO (modos editar y ver)
     // =================================================================
-    if (MODO_FORMULARIO !== 'nuevo') {
+    if (Object.keys(datosPrecargados).length > 0) {
             // --- RECONSTRUCCIÓN DE DIAGNÓSTICOS DIFERENCIALES DINÁMICOS ---
             // 1. Averiguamos cuántos diagnósticos diferenciales se guardaron en total
             let maxDiagnosticos = 1;
@@ -1897,7 +1929,127 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     iniciarPasos();
+    iniciarBorrador();
 });
+
+// =================================================================
+// BORRADOR EN ESTE NAVEGADOR: lo escrito se guarda cada pocos segundos para no perderlo si se cierra
+// la pestaña o vence la sesión. Al volver a abrir el caso se ofrece recuperarlo.
+// =================================================================
+let construirDatosDelCaso = null;      // se define al cargar el formulario
+let temporizadorBorrador = null;
+let borradorPendiente = false;         // hay un borrador anterior sin decidir: no se sobrescribe
+const DIAS_BORRADOR = 30;
+
+// Huella sencilla de lo guardado en el servidor, para avisar si cambió desde que se hizo el borrador
+function huellaTexto(texto) {
+    let h = 5381;
+    for (let i = 0; i < texto.length; i++) h = ((h << 5) + h + texto.charCodeAt(i)) | 0;
+    return texto.length + '-' + (h >>> 0).toString(36);
+}
+const HUELLA_SERVIDOR = huellaTexto(JSON.stringify(datosServidor));
+
+function leerBorrador() {
+    try { return JSON.parse(localStorage.getItem(CLAVE_BORRADOR) || 'null'); } catch (e) { return null; }
+}
+
+function borrarBorrador() {
+    try { localStorage.removeItem(CLAVE_BORRADOR); } catch (e) { /* sin almacenamiento */ }
+}
+
+// Al guardar en el servidor o al descartar los cambios: se borra y ya no se vuelve a guardar en esta página
+let borradorDetenido = false;
+function detenerBorrador() {
+    borradorDetenido = true;
+    clearTimeout(temporizadorBorrador);
+    borrarBorrador();
+}
+
+function fechaLegible(ms) {
+    const d = new Date(ms);
+    return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' }) + ' a las ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
+function guardarBorrador() {
+    if (MODO_FORMULARIO === 'ver' || borradorPendiente || borradorDetenido || !construirDatosDelCaso) return;
+    const estado = document.getElementById('estado-borrador');
+    try {
+        localStorage.setItem(CLAVE_BORRADOR, JSON.stringify({ guardado: Date.now(), base: HUELLA_SERVIDOR, datos: construirDatosDelCaso(false) }));
+        if (estado) estado.innerHTML = '<i class="bi bi-check2 me-1"></i>Borrador guardado en este navegador a las '
+            + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+        if (estado) estado.textContent = 'No se pudo guardar el borrador en este navegador.';
+    }
+}
+
+function programarBorrador() {
+    clearTimeout(temporizadorBorrador);
+    temporizadorBorrador = setTimeout(guardarBorrador, 2500);
+}
+
+function mostrarAvisoBorrador(html, clase) {
+    const aviso = document.getElementById('aviso-borrador');
+    aviso.innerHTML = html ? `<div class="alert ${clase} d-flex flex-wrap align-items-center gap-2 mb-4" role="status">${html}</div>` : '';
+}
+
+function iniciarBorrador() {
+    if (MODO_FORMULARIO === 'ver') return;
+
+    // Borradores de más de 30 días se eliminan
+    try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const clave = localStorage.key(i);
+            if (!clave || clave.indexOf('hv_borrador_caso_') !== 0) continue;
+            const b = JSON.parse(localStorage.getItem(clave) || 'null');
+            if (!b || !b.guardado || Date.now() - b.guardado > DIAS_BORRADOR * 86400000) localStorage.removeItem(clave);
+        }
+    } catch (e) { /* sin almacenamiento */ }
+
+    // Estado del borrador junto a los botones de guardar
+    const barra = document.querySelector('.hv-barra-guardar');
+    if (barra) {
+        const estado = document.createElement('span');
+        estado.id = 'estado-borrador';
+        estado.className = 'small text-muted align-self-center me-auto';
+        barra.prepend(estado);
+    }
+
+    if (borradorRecuperado) {
+        mostrarAvisoBorrador('<i class="bi bi-arrow-counterclockwise fs-5"></i><span class="me-auto">Se recuperó el borrador (guardado el '
+            + hvEscaparHtml(fechaLegible(borradorRecuperado.guardado)) + '). <strong>Guarda el caso</strong> para conservarlo en el servidor.</span>'
+            + '<button type="button" class="btn btn-sm btn-outline-secondary" id="btn-cerrar-aviso-borrador">Entendido</button>', 'alert-info');
+        document.getElementById('btn-cerrar-aviso-borrador').addEventListener('click', () => mostrarAvisoBorrador(''));
+    } else {
+        const anterior = leerBorrador();
+        if (anterior && anterior.datos) {
+            borradorPendiente = true;
+            const cambioServidor = MODO_FORMULARIO === 'editar' && anterior.base && anterior.base !== HUELLA_SERVIDOR;
+            mostrarAvisoBorrador('<i class="bi bi-journal-arrow-up fs-5"></i><span class="me-auto">Hay un borrador sin guardar de '
+                + (MODO_FORMULARIO === 'nuevo' ? 'un caso nuevo' : 'este caso') + ' (guardado el ' + hvEscaparHtml(fechaLegible(anterior.guardado)) + ').'
+                + (cambioServidor ? ' <strong>Ojo:</strong> el caso se modificó en el servidor después de ese borrador; si lo recuperas, al guardar reemplazará esos cambios.' : '')
+                + ' Mientras no elijas, no se guarda un borrador nuevo.</span>'
+                + '<button type="button" class="btn btn-sm btn-primary" id="btn-recuperar-borrador"><i class="bi bi-arrow-counterclockwise me-1"></i>Recuperar borrador</button>'
+                + '<button type="button" class="btn btn-sm btn-outline-secondary" id="btn-descartar-borrador">Descartar borrador</button>', 'alert-warning');
+            document.getElementById('btn-recuperar-borrador').addEventListener('click', () => {
+                try { sessionStorage.setItem('hv_recuperar_borrador', CLAVE_BORRADOR); } catch (e) { /* sin almacenamiento */ }
+                window.location.reload();
+            });
+            document.getElementById('btn-descartar-borrador').addEventListener('click', () => {
+                borrarBorrador();
+                borradorPendiente = false;
+                mostrarAvisoBorrador('');
+            });
+        }
+    }
+
+    // Se guarda después de cada cambio (también al quitar renglones, tarjetas o archivos)
+    const formulario = document.getElementById('formulario-caso');
+    ['input', 'change'].forEach(evento => formulario.addEventListener(evento, programarBorrador));
+    formulario.addEventListener('click', (e) => { if (e.target.closest('button:not(.control-navegacion)')) programarBorrador(); });
+
+    // Cancelar o Descartar cambios también descartan el borrador
+    document.querySelectorAll('.descartar-borrador').forEach(enlace => enlace.addEventListener('click', detenerBorrador));
+}
 
 // =================================================================
 // PASOS DEL FORMULARIO: una sección a la vez, con índice y estado de avance
@@ -1966,6 +2118,7 @@ function iniciarPasos() {
     }
 
     const enlace = /^#paso-(\d+)$/.exec(window.location.hash);
+    iniciarListoJuego();
     actualizarIndicePasos();
     mostrarPaso(enlace ? parseInt(enlace[1], 10) - 1 : 0, false);
 }
@@ -1983,6 +2136,60 @@ function actualizarIndicePasos() {
             botones[i].querySelector('.hv-paso-estado').textContent = texto;
         }
         if (opciones[i]) opciones[i].textContent = `${i + 1}. ${paso.dataset.titulo} · ${texto}`;
+    });
+    actualizarListoJuego();
+}
+
+// =================================================================
+// DATOS MÍNIMOS PARA EL JUEGO: lo que necesita el caso para el paciente virtual y la evaluación
+// [texto, paso (1-7), campo al que se lleva al autor, comprobación]
+// =================================================================
+function diferencialesConNombre() {
+    return Array.from(document.querySelectorAll('#formulario-caso input[name^="diag_dif_"]'))
+        .filter(c => /^diag_dif_\d+$/.test(c.name) && c.value.trim() !== '').length;
+}
+function preguntasCompletas() {
+    return Array.from(document.querySelectorAll('#formulario-caso input[name^="pregunta_"]')).filter(c => {
+        const n = c.name.replace('pregunta_', '');
+        if (c.value.trim() === '' || !/^\d+$/.test(n)) return false;
+        const opciones = [1, 2, 3, 4].every(k => campoConValor(`p${n}_opcion_${k}`));
+        return opciones && campoConValor(`p${n}_correcta`);
+    }).length;
+}
+const REQUISITOS_JUEGO = [
+    ['Prompt del paciente', 7, 'prompts', () => campoConValor('prompts')],
+    ['Sexo y edad', 1, 'edad', () => campoConValor('sexo') && campoConValor('edad')],
+    ['Signos vitales (TA y FC)', 3, 'signos_ta', () => campoConValor('signos_ta') && campoConValor('signos_fc')],
+    ['Diagnóstico correcto', 5, 'diagnostico_correcto', () => campoConValor('diagnostico_correcto')],
+    ['Al menos 2 diagnósticos diferenciales', 5, 'diag_dif_1', () => diferencialesConNombre() >= 2],
+    ['Al menos 1 pregunta completa', 6, 'pregunta_1', () => preguntasCompletas() >= 1]
+];
+
+function actualizarListoJuego() {
+    const lista = document.getElementById('listo-juego-lista');
+    if (!lista) return;
+    const resultados = REQUISITOS_JUEGO.map(r => r[3]());
+    const cumplidos = resultados.filter(Boolean).length;
+    const conteo = document.getElementById('listo-juego-conteo');
+    conteo.textContent = cumplidos === REQUISITOS_JUEGO.length ? 'Listo' : `${cumplidos} de ${REQUISITOS_JUEGO.length}`;
+    conteo.classList.toggle('completo', cumplidos === REQUISITOS_JUEGO.length);
+    lista.innerHTML = REQUISITOS_JUEGO.map((r, i) =>
+        `<li><button type="button" class="hv-requisito control-navegacion${resultados[i] ? ' cumplido' : ''}" data-indice="${i}">`
+        + `<i class="bi ${resultados[i] ? 'bi-check-circle-fill' : 'bi-circle'} me-2"></i>${hvEscaparHtml(r[0])}</button></li>`).join('');
+}
+
+function iniciarListoJuego() {
+    const lista = document.getElementById('listo-juego-lista');
+    if (!lista) return;
+    // En pantallas grandes se muestra abierto; en celular, cerrado para no empujar el formulario
+    document.getElementById('listo-juego').open = window.innerWidth >= 992;
+    lista.addEventListener('click', (e) => {
+        const boton = e.target.closest('.hv-requisito');
+        if (!boton) return;
+        const r = REQUISITOS_JUEGO[parseInt(boton.dataset.indice, 10)];
+        mostrarPaso(r[1] - 1);
+        const campo = document.querySelector(`#formulario-caso [name="${r[2]}"]`);
+        if (campo && MODO_FORMULARIO !== 'ver') setTimeout(() => campo.focus({ preventScroll: false }), 400);
     });
 }
 
