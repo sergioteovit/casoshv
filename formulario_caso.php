@@ -446,10 +446,10 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
             <div class="form-text" id="texto-imc"></div>
         </div>
 
-        <label class="form-label fw-bold mb-2">EXPLORACIÓN SEGMENTARIA:</label>
+        <label class="form-label fw-bold mb-2" id="titulo-exploracion-segmentaria">EXPLORACIÓN SEGMENTARIA:</label>
         <div id="apartados-exploracion"></div>
 
-        <details class="mb-4 border rounded p-3 bg-light" id="vista-previa-textos">
+        <details class="mb-4 border rounded p-3 bg-light vista-previa-juego" id="vista-previa-textos">
             <summary class="fw-bold text-secondary"><i class="bi bi-eye me-1"></i> Ver el texto que se guardará para el juego (historia clínica y exploración física)</summary>
             <label class="form-label small fw-bold text-muted mt-3">Historia clínica</label>
             <textarea class="form-control form-control-sm mb-3" id="vista-previa-historia" rows="6" readonly></textarea>
@@ -519,7 +519,7 @@ hv_cabecera($titulosPagina[$modo] . ($modo === 'nuevo' ? '' : ' #' . $idCaso), $
 
         <div id="apartados-seguimiento"></div>
 
-        <details class="mb-4 border rounded p-3 bg-light">
+        <details class="mb-4 border rounded p-3 bg-light vista-previa-juego">
             <summary class="fw-bold text-secondary"><i class="bi bi-eye me-1"></i> Ver el texto que se guardará para el juego (laboratorios y diagnóstico, tratamiento y seguimiento)</summary>
             <label class="form-label small fw-bold text-muted mt-3">Laboratorios, imágenes y otros exámenes</label>
             <textarea class="form-control form-control-sm mb-3" id="vista-previa-laboratorios" rows="6" readonly></textarea>
@@ -1852,8 +1852,40 @@ document.addEventListener('DOMContentLoaded', () => {
         formulario.querySelectorAll('input, select, textarea, button').forEach(control => {
             control.disabled = true;
         });
+        prepararLecturaApartados();
     }
 });
+
+// Modo ver: el caso se lee como la plantilla. Se ocultan los apartados vacíos, los grupos y tablas
+// sin información, las guías de captura y las vistas previas; los cuadros con texto crecen a su contenido.
+function prepararLecturaApartados() {
+    const vacio = campo => campo.value.trim() === '';
+    document.querySelectorAll('textarea.apartado-historia, textarea.apartado-exploracion, textarea.apartado-laboratorios, textarea.apartado-diagnostico').forEach(campo => {
+        const contenedor = campo.closest('details') || campo.closest('div.mb-3, div.mb-4');
+        if (contenedor) contenedor.classList.toggle('d-none', vacio(campo));
+    });
+    document.querySelectorAll('.grupo-apartados').forEach(grupo => {
+        const conTexto = Array.from(grupo.querySelectorAll('textarea')).some(campo => !vacio(campo));
+        grupo.classList.toggle('d-none', !conTexto);
+    });
+    const segmentaria = document.getElementById('apartados-exploracion');
+    document.getElementById('titulo-exploracion-segmentaria').classList.toggle('d-none',
+        !Array.from(segmentaria.querySelectorAll('textarea')).some(campo => !vacio(campo)));
+    ['filas-estadificacion', 'filas-farmacologico'].forEach(id => {
+        const contenedor = document.getElementById(id);
+        if (contenedor.children.length === 0) contenedor.closest('div.mb-4').classList.add('d-none');
+    });
+    document.querySelectorAll('.btn-quitar-fila').forEach(boton => boton.closest('div').classList.add('d-none'));
+    ['btn-add-estadificacion', 'btn-add-farmacologico'].forEach(id => document.getElementById(id).classList.add('d-none'));
+    document.querySelectorAll('.vista-previa-juego').forEach(detalle => detalle.classList.add('d-none'));
+    document.querySelectorAll('textarea.apartado-historia + .form-text, textarea.apartado-exploracion + .form-text, textarea.apartado-laboratorios + .form-text, textarea.apartado-diagnostico + .form-text').forEach(guia => guia.classList.add('d-none'));
+    document.querySelectorAll('textarea.apartado-historia, textarea.apartado-exploracion, textarea.apartado-laboratorios, textarea.apartado-diagnostico, .bloque-formato-anterior textarea').forEach(campo => {
+        if (!vacio(campo) && campo.offsetParent !== null) {
+            campo.style.height = 'auto';
+            campo.style.height = (campo.scrollHeight + 4) + 'px';
+        }
+    });
+}
 </script>
 
 </body>
