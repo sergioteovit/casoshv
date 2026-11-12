@@ -147,41 +147,51 @@ $stmt = $pdo->query("SELECT id, usuario, rol, nombre, apellidos, correo, fecha_c
 $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Gestión de Usuarios</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style> body { background-color: #f4f7f6; } </style>
-</head>
-<body>
+<?php
+require_once __DIR__ . '/plantilla.php';
+$conteoRoles = ['Invitado' => 0, 'Editor' => 0, 'Administrador' => 0];
+foreach ($usuarios as $u) { if (isset($conteoRoles[$u['rol']])) { $conteoRoles[$u['rol']]++; } }
+hv_encabezado('Usuarios', 'usuarios');
+hv_cabecera('Gestión de usuarios', 'Activa cuentas nuevas, asigna roles y restablece contraseñas.', 'bi-people');
+?>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
-  <div class="container">
-    <a class="navbar-brand" href="lista_casos.php"><i class="bi bi-heart-pulse-fill text-danger me-2"></i>Casos Clínicos</a>
-    <div class="collapse navbar-collapse">
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link" href="lista_casos.php">Lista de Casos</a></li>
-        <li class="nav-item"><a class="nav-link active" href="gestion_usuarios.php">Gestión de Usuarios</a></li>
-      </ul>
-      <div class="d-flex align-items-center text-white">
-          <span class="me-3 small"><i class="bi bi-person-circle"></i> <?= htmlspecialchars($_SESSION['nombre_completo']) ?></span>
-          <a href="perfil.php" class="btn btn-sm btn-outline-light me-2">Mi Perfil</a>
-          <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
-      </div>
-    </div>
-  </div>
-</nav>
-
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-people-fill text-primary me-2"></i> Gestión de Usuarios</h2>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
-            <i class="bi bi-person-plus-fill me-1"></i> Dar de Alta Usuario
-        </button>
-    </div>
+<div class="container pb-5 position-relative">
+    <section class="hv-tarjeta p-3 p-md-4 mb-4 hv-aparecer">
+        <div class="row g-3 align-items-center">
+            <div class="col-6 col-md">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="hv-icono"><i class="bi bi-people"></i></span>
+                    <div><div class="hv-titulo h4 mb-0"><?= count($usuarios) ?></div><div class="text-muted small">cuentas</div></div>
+                </div>
+            </div>
+            <div class="col-6 col-md">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="hv-icono hv-icono-coral"><i class="bi bi-hourglass-split"></i></span>
+                    <div><div class="hv-titulo h4 mb-0"><?= $conteoRoles['Invitado'] ?></div><div class="text-muted small">pendientes de activar</div></div>
+                </div>
+            </div>
+            <div class="col-6 col-md">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="hv-icono hv-icono-turquesa"><i class="bi bi-pencil"></i></span>
+                    <div><div class="hv-titulo h4 mb-0"><?= $conteoRoles['Editor'] ?></div><div class="text-muted small">editores</div></div>
+                </div>
+            </div>
+            <div class="col-6 col-md">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="hv-icono hv-icono-oro"><i class="bi bi-shield-lock"></i></span>
+                    <div><div class="hv-titulo h4 mb-0"><?= $conteoRoles['Administrador'] ?></div><div class="text-muted small">administradores</div></div>
+                </div>
+            </div>
+            <div class="col-12 col-md-auto">
+                <button class="btn btn-turquesa w-100" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
+                    <i class="bi bi-person-plus me-1"></i>Dar de alta un usuario
+                </button>
+            </div>
+        </div>
+    </section>
+    <?php if ($conteoRoles['Invitado'] > 0): ?>
+        <div class="alert alert-warning small"><i class="bi bi-info-circle me-1"></i>Las cuentas en <strong>Invitado</strong> no ven casos. Para activarlas, cámbiales el rol a Editor en la tabla.</div>
+    <?php endif; ?>
 
     <?php if(isset($mensajeExito)): ?>
         <div class="alert alert-success alert-dismissible fade show"><?= $mensajeExito ?> <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
@@ -208,10 +218,10 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     <div id="contenedor-alerta"></div>
 
-    <div class="card shadow-sm">
+    <div class="hv-tarjeta overflow-hidden">
         <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-dark">
+            <table class="table table-hover align-middle hv-tabla">
+                <thead>
                     <tr>
                         <th class="ps-3">ID</th>
                         <th>Nombre Completo</th>
@@ -327,7 +337,7 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<?php hv_pie(); ?>
     
 <script>
 document.addEventListener('DOMContentLoaded', () => {

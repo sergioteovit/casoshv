@@ -231,40 +231,13 @@ try {
     die("Error de conexión o consulta a la base de datos: " . hv_error_interno($e));
 }
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Casos Clínicos Históricos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-</head>
-<body class="bg-light">
+<?php
+require_once __DIR__ . '/plantilla.php';
+hv_encabezado('Casos históricos', 'historicos');
+hv_cabecera('Casos clínicos históricos', 'Casos de la historia de la medicina, guardados en formato JSON estructurado.', 'bi-journal-medical', 'assets/img/cabecera-historia.png');
+?>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
-  <div class="container-fluid px-4">
-    <a class="navbar-brand" href="lista_casos.php">
-        <i class="bi bi-heart-pulse-fill text-danger me-2"></i>Sistema Base
-    </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuNavegacion">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="menuNavegacion">
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link" href="lista_casos.php">Lista de Casos</a></li>
-        <li class="nav-item"><a class="nav-link" href="hyfm.php">HyFM</a></li>
-        <li class="nav-item"><a class="nav-link active text-info fw-bold" href="casos_historicos.php"><i class="bi bi-journal-medical me-1"></i> Casos Históricos</a></li>
-      </ul>
-      <div class="d-flex align-items-center text-white">
-          <span class="me-3 small"><i class="bi bi-person-circle text-primary me-1"></i> <?= htmlspecialchars($_SESSION['nombre_completo'] ?? 'Usuario') ?></span>
-          <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
-      </div>
-    </div>
-  </div>
-</nav>
-
-<div class="container-fluid px-4 my-4">
+<div class="container-fluid px-3 px-lg-4 pb-5 position-relative">
 
     <!-- MENSAJES Y ALERTAS -->
     <?php if (isset($_GET['msg']) && $_GET['msg'] === 'creado'): ?>
@@ -291,37 +264,30 @@ try {
     <?php if (isset($error_descarga)): ?><div class="alert alert-danger shadow-sm"><i class="bi bi-exclamation-triangle-fill me-2"></i> <?= htmlspecialchars($error_descarga) ?></div><?php endif; ?>
 
     <!-- ENCABEZADO Y ACCIONES GENERALES -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-        <div>
-            <h2 class="d-flex align-items-center mb-1">
-                <i class="bi bi-journal-bookmark-fill text-info me-2"></i>
-                Casos Clínicos Históricos
-                <span class="badge bg-info text-white ms-3 rounded-pill fs-6 shadow-sm">
-                    <?= $total_registros ?> casos en total
-                </span>
-            </h2>
-            <p class="text-muted mb-0">Gestión de casos históricos guardados en formato JSON estructurado.</p>
-        </div>
-
-        <div class="d-flex gap-2 mt-3 mt-md-0">
-            <a href="casos_historicos.php?descargar_todos=1" class="btn btn-outline-success shadow-sm text-nowrap" title="Descargar todos los casos en un archivo ZIP">
-                <i class="bi bi-file-earmark-zip-fill me-1"></i> Descargar Colección (ZIP)
+    <section class="hv-tarjeta p-3 p-md-4 mb-4 hv-aparecer">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <span class="hv-icono"><i class="bi bi-journal-bookmark"></i></span>
+            <div class="me-auto">
+                <div class="hv-titulo h4 mb-0"><?= (int)$total_registros ?> <?= (int)$total_registros === 1 ? 'caso histórico' : 'casos históricos' ?></div>
+                <div class="text-muted small">en formato JSON estructurado</div>
+            </div>
+            <a href="casos_historicos.php?descargar_todos=1" class="btn btn-outline-primary text-nowrap" title="Descargar todos los casos en un archivo ZIP">
+                <i class="bi bi-file-earmark-zip me-1"></i>Colección ZIP
             </a>
-
             <?php if ($_SESSION['rol'] !== 'Invitado'): ?>
-                <button type="button" class="btn btn-info text-white shadow-sm fw-bold text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNuevoCaso">
-                    <i class="bi bi-plus-circle me-1"></i> Nuevo Caso
+                <button type="button" class="btn btn-turquesa text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNuevoCaso">
+                    <i class="bi bi-plus-circle me-1"></i>Nuevo caso histórico
                 </button>
             <?php endif; ?>
         </div>
-    </div>
+    </section>
 
     <!-- TABLA DE CASOS -->
-    <div class="card shadow-sm border-0">
+    <div class="hv-tarjeta overflow-hidden">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-dark">
+                <table class="table table-hover align-middle hv-tabla">
+                    <thead>
                         <tr>
                             <th class="text-center" style="width: 80px;"># ID</th>
                             <th style="width: 250px;">Título del Caso</th>
@@ -602,7 +568,7 @@ try {
 
 <?php endif; ?>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<?php hv_pie(); ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

@@ -79,52 +79,28 @@ $offset = ($pagina_actual - 1) * $casos_por_pagina;
 $casos_mostrar = array_slice($casos_procesados, $offset, $casos_por_pagina);
 
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auditoría de Casos Clínicos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        .badge-variable { font-size: 0.75rem; margin: 2px; padding: 5px 8px; font-weight: 500; display: inline-block;}
-        .col-variables { width: 30%; }
-    </style>
-</head>
-<body class="bg-light">
+<?php
+require_once __DIR__ . '/plantilla.php';
+hv_encabezado('Verificador', 'verificador');
+hv_cabecera('Verificador de integridad', 'Revisa qué campos están llenos o vacíos en cada caso clínico.', 'bi-ui-checks-grid');
+?>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
-  <div class="container-fluid px-4">
-    <a class="navbar-brand" href="lista_casos.php">
-        <i class="bi bi-shield-lock-fill text-warning me-2"></i>Auditoría Admin
-    </a>
-    <div class="collapse navbar-collapse">
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link" href="lista_casos.php">Volver a Lista de Casos</a></li>
-        <li class="nav-item"><a class="nav-link active" href="verificador_casos.php">Verificador de Variables</a></li>
-      </ul>
-      <div class="d-flex align-items-center text-white">
-          <span class="me-3 small"><i class="bi bi-person-circle text-primary me-1"></i> <?= htmlspecialchars($_SESSION['nombre_completo'] ?? 'Admin') ?></span>
-          <a href="logout.php?csrf=<?= hv_token_csrf() ?>" class="btn btn-sm btn-danger">Salir</a>
-      </div>
-    </div>
-  </div>
-</nav>
-
-<div class="container-fluid px-4 my-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="bi bi-ui-checks-grid text-primary me-2"></i>Verificador de Integridad de Datos</h2>
-            <p class="text-muted">Análisis de completitud (Mostrando página <?= $pagina_actual ?> de <?= $total_paginas ?: 1 ?>).</p>
+<div class="container-fluid px-3 px-lg-4 pb-5 position-relative">
+    <section class="hv-tarjeta p-3 p-md-4 mb-4 hv-aparecer">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <span class="hv-icono"><i class="bi bi-ui-checks-grid"></i></span>
+            <div class="me-auto">
+                <div class="hv-titulo h5 mb-0">Análisis de completitud</div>
+                <div class="text-muted small">Página <?= (int)$pagina_actual ?> de <?= (int)($total_paginas ?: 1) ?> · <?= (int)$total_casos ?> casos</div>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="card shadow-sm border-0 mb-4">
+    <div class="hv-tarjeta overflow-hidden mb-4">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle mb-0">
-                    <thead class="table-dark">
+                <table class="table table-hover align-middle hv-tabla">
+                    <thead>
                         <tr>
                             <th class="text-center" style="width: 80px;">ID</th>
                             <th style="width: 150px;">Identificador</th>
@@ -225,6 +201,6 @@ $casos_mostrar = array_slice($casos_procesados, $offset, $casos_por_pagina);
     <?php endif; ?>
 
 </div>
-
+<?php hv_pie(); ?>
 </body>
 </html>

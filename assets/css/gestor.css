@@ -519,3 +519,36 @@ section[id] { scroll-margin-top: 5.5rem; }
     border-radius: 0 0 var(--hv-radio) var(--hv-radio);
 }
 @media (min-width: 768px) { .hv-barra-guardar { margin-inline: -3rem; padding: 1rem 3rem; } }
+
+/* Páginas de catálogos (históricos, Historia y FM, usuarios, verificador) */
+.pagination { gap: .3rem; flex-wrap: wrap; box-shadow: none !important; }
+.pagination .page-link {
+    border-radius: 999px !important; border: 1px solid var(--hv-borde);
+    color: var(--hv-morado); font-weight: 700; min-width: 2.4rem; text-align: center;
+}
+.pagination .page-item.active .page-link { background: var(--hv-morado); border-color: var(--hv-morado); color: #fff; }
+.pagination .page-link:hover { background: var(--hv-morado-claro); }
+.pagination .page-item.disabled .page-link { color: var(--hv-texto-suave); background: transparent; }
+
+.modal-content { border: 0; border-radius: var(--hv-radio); overflow: hidden; box-shadow: var(--hv-sombra-alta); }
+.modal-header { border-bottom-color: var(--hv-borde); }
+.modal-header .modal-title { font-family: var(--hv-fuente-titulos); font-weight: 700; }
+.modal-footer { border-top-color: var(--hv-borde); }
+
+/* Colores de Bootstrap que usan las páginas anteriores, ajustados a la paleta */
+.btn-info, .btn-success {
+    --bs-btn-color: #fff; --bs-btn-bg: var(--hv-turquesa); --bs-btn-border-color: var(--hv-turquesa);
+    --bs-btn-hover-color: #fff; --bs-btn-hover-bg: #0f8f87; --bs-btn-hover-border-color: #0f8f87;
+    --bs-btn-active-color: #fff; --bs-btn-active-bg: #0c7a73; --bs-btn-active-border-color: #0c7a73;
+}
+.btn-outline-success, .btn-outline-info {
+    --bs-btn-color: #0c7a73; --bs-btn-border-color: var(--hv-turquesa);
+    --bs-btn-hover-color: #fff; --bs-btn-hover-bg: var(--hv-turquesa); --bs-btn-hover-border-color: var(--hv-turquesa);
+}
+.bg-info { background-color: var(--hv-turquesa) !important; }
+.text-info { color: #0c7a73 !important; }
+.badge { border-radius: 999px; font-weight: 700; }
+
+/* Verificador: etiquetas de variables */
+.badge-variable { font-size: .75rem; margin: 2px; padding: 5px 8px; font-weight: 600; display: inline-block; }
+.col-variables { width: 30%; }
