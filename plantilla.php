@@ -9,6 +9,17 @@ require_once __DIR__ . '/seguridad.php';
 // Subir este número al cambiar gestor.css para que los navegadores no usen la copia anterior
 define('GESTOR_VERSION_ESTILOS', '7');
 
+// Portal principal de Hospital Virtual (botón de la barra, pie y páginas de acceso)
+define('HV_URL_PORTAL', 'https://hospitalvirtual.facmed.unam.mx/');
+
+// Botón al portal; en pantallas xl solo el ícono para que la barra no se parta
+function hv_boton_portal($clase = 'btn btn-outline-light btn-sm')
+{
+    ?>
+<a href="<?php echo h(HV_URL_PORTAL); ?>" class="<?php echo h($clase); ?>" title="Ir al portal de Hospital Virtual" aria-label="Ir al portal de Hospital Virtual"><i class="bi bi-hospital"></i><span class="ms-1 d-xl-none d-xxl-inline">Hospital Virtual</span></a>
+    <?php
+}
+
 if (!function_exists('h')) {
     function h($texto)
     {
@@ -115,6 +126,7 @@ function hv_encabezado($titulo, $activa = '', $opciones = [])
                 <?php endforeach; ?>
             </ul>
             <div class="d-flex align-items-center gap-2 pb-2 pb-xl-0">
+                <?php hv_boton_portal(); ?>
                 <?php if ($conSesion): ?>
                     <div class="dropdown">
                         <button class="btn btn-sm btn-usuario dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -176,7 +188,7 @@ function hv_acceso_fin()
                     <img src="assets/img/escudo-unam-blanco.png" alt="Universidad Nacional Autónoma de México">
                     <img src="assets/img/escudo-fm-blanco-web.png" alt="Facultad de Medicina">
                 </div>
-                <p class="small mt-2 mb-0">Facultad de Medicina, Universidad Nacional Autónoma de México · <a href="index.php">Página de inicio</a></p>
+                <p class="small mt-2 mb-0">Facultad de Medicina, Universidad Nacional Autónoma de México · <a href="index.php">Página de inicio</a> · <a href="<?php echo h(HV_URL_PORTAL); ?>">Portal de Hospital Virtual</a></p>
             </div>
         </div>
     </div>
@@ -222,7 +234,7 @@ function hv_pie($opciones = [])
                 <div class="small mt-1">Proyecto apoyado por la Secihti en 2025.</div>
             </div>
             <div class="col-md-auto small">
-                <a href="index.php">Inicio</a> · <a href="game/">Estadísticas del juego</a>
+                <a href="<?php echo h(HV_URL_PORTAL); ?>">Hospital Virtual</a> · <a href="index.php">Inicio</a> · <a href="game/">Estadísticas del juego</a>
                 <?php if (!$conSesion): ?> · <a href="login.php">Iniciar sesión</a><?php endif; ?>
             </div>
         </div>

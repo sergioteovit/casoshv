@@ -122,7 +122,7 @@ hv_encabezado('Iniciar sesión', '', ['barra' => false, 'clase' => 'hv-acceso'])
                 <img src="assets/img/escudo-fm-blanco-web.png" alt="Facultad de Medicina" style="height: 56px">
             </div>
             <p class="text-center small mt-2 mb-0" style="color: rgba(255,255,255,.75)">
-                Facultad de Medicina, Universidad Nacional Autónoma de México
+                Facultad de Medicina, Universidad Nacional Autónoma de México · <a href="<?php echo h(HV_URL_PORTAL); ?>" style="color: inherit">Portal de Hospital Virtual</a>
             </p>
         </div>
     </div>
