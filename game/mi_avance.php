@@ -106,14 +106,23 @@ try {
     $retos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $stmt = $conn->prepare("
-        SELECT i.Nombre, i.Descripcion, ij.ObtenidaEn
-        FROM EstInsigniasJugador ij
-        JOIN EstInsignias i ON i.IdInsignia = ij.IdInsignia
-        WHERE ij.UserId = ?
-        ORDER BY ij.ObtenidaEn DESC
+        SELECT i.IdInsignia, i.Nombre, i.Descripcion, i.IdReto, ij.ObtenidaEn
+        FROM EstInsignias i
+        LEFT JOIN EstInsigniasJugador ij ON ij.IdInsignia = i.IdInsignia AND ij.UserId = ?
+        WHERE i.Activa = 1 OR ij.UserId IS NOT NULL
+        ORDER BY i.IdReto = 'level' DESC, i.IdReto, i.IdInsignia LIKE 'CASO\\_Especialista\\_%', i.Nombre
     ");
     $stmt->execute([$userId]);
+    // Catálogo completo; las que aún no gana llevan ObtenidaEn nulo
     $insignias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $insigniasGanadas = 0;
+    $gruposInsignias = [];
+    foreach ($insignias as $insignia) {
+        if ($insignia['ObtenidaEn'] !== null) {
+            $insigniasGanadas++;
+        }
+        $gruposInsignias[(string)$insignia['IdReto']][] = $insignia;
+    }
 
     // Lo que escribió en cada caso clínico, con la conversación con el paciente
     $casos = est_casos_alumno($conn, $userId);
@@ -203,28 +212,79 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
             <?php hv_tarjeta_casos($casos, 'Mis casos clínicos', 'Todavía no hay casos clínicos con respuestas guardadas.', 'mis-casos'); ?>
 
             <section class="hv-tarjeta">
-                <div class="hv-tarjeta-encabezado"><i class="bi bi-award me-2 text-primary"></i>Mis insignias</div>
+                <div class="hv-tarjeta-encabezado d-flex flex-wrap align-items-center gap-2">
+                    <span class="me-auto"><i class="bi bi-award me-2 text-primary"></i>Mis insignias</span>
+                    <span class="small text-muted fw-normal"><?php echo $insigniasGanadas; ?> de <?php echo count($insignias); ?> ganadas</span>
+                </div>
                 <?php if (!$insignias): ?>
                     <div class="hv-vacio">
+                        <i class="bi bi-award"></i>
+                        <div class="fw-bold">Todavía no hay insignias en el catálogo.</div>
+                    </div>
+                <?php else: ?>
+                    <div class="p-3 pb-0">
+                        <div class="progress mb-3" style="height: .5rem" role="progressbar" aria-label="Insignias ganadas" aria-valuenow="<?php echo $insigniasGanadas; ?>" aria-valuemin="0" aria-valuemax="<?php echo count($insignias); ?>">
+                            <div class="progress-bar bg-success" style="width: <?php echo round(100 * $insigniasGanadas / count($insignias)); ?>%"></div>
+                        </div>
+                        <ul class="nav hv-pestanas" id="filtroInsignias">
+                            <li class="nav-item"><button type="button" class="nav-link active" data-filtro="todas">Todas</button></li>
+                            <li class="nav-item"><button type="button" class="nav-link" data-filtro="ganada">Ganadas (<?php echo $insigniasGanadas; ?>)</button></li>
+                            <li class="nav-item"><button type="button" class="nav-link" data-filtro="pendiente">Por ganar (<?php echo count($insignias) - $insigniasGanadas; ?>)</button></li>
+                        </ul>
+                    </div>
+                    <?php
+                    $nombresGrupos = ['level' => 'Casos clínicos', 'GastroBalance' => 'GastroBalance', 'ColonCommander' => 'Colon Commander'];
+                    foreach ($gruposInsignias as $idReto => $grupo):
+                    ?>
+                        <div class="hv-grupo-insignias px-3 pt-3">
+                            <h3 class="h6 text-muted mb-2"><?php echo h($nombresGrupos[$idReto] ?? ($idReto !== '' ? $idReto : 'Otras')); ?></h3>
+                            <div class="row g-3">
+                                <?php foreach ($grupo as $insignia): $ganada = $insignia['ObtenidaEn'] !== null; ?>
+                                    <div class="col-sm-6 hv-insignia-columna" data-estado="<?php echo $ganada ? 'ganada' : 'pendiente'; ?>">
+                                        <div class="hv-insignia<?php echo $ganada ? '' : ' hv-insignia-bloqueada'; ?>">
+                                            <span class="hv-icono <?php echo $ganada ? 'hv-icono-oro' : ''; ?>"><i class="bi <?php echo $ganada ? 'bi-award-fill' : 'bi-lock-fill'; ?>"></i></span>
+                                            <div>
+                                                <div class="fw-bold"><?php echo h($insignia['Nombre']); ?></div>
+                                                <div class="small text-muted"><?php echo h($insignia['Descripcion']); ?></div>
+                                                <div class="hv-logro-tiempo mt-1">
+                                                    <?php if ($ganada): ?>
+                                                        <i class="bi bi-check-circle-fill text-success me-1"></i>Obtenida el <?php echo h(fecha_corta($insignia['ObtenidaEn'])); ?>
+                                                    <?php else: ?>
+                                                        Aún no la obtienes
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                    <div class="hv-vacio d-none" id="insigniasSinResultados">
                         <i class="bi bi-award"></i>
                         <div class="fw-bold">Todavía no tienes insignias.</div>
                         <div class="small">Se ganan por precisión, buen razonamiento clínico y constancia.</div>
                     </div>
-                <?php else: ?>
-                    <div class="row g-3 p-3">
-                        <?php foreach ($insignias as $insignia): ?>
-                            <div class="col-sm-6">
-                                <div class="d-flex gap-3 p-3 rounded-3 h-100" style="background: var(--hv-fondo)">
-                                    <span class="hv-icono hv-icono-turquesa"><i class="bi bi-award-fill"></i></span>
-                                    <div>
-                                        <div class="fw-bold"><?php echo h($insignia['Nombre']); ?></div>
-                                        <div class="small text-muted"><?php echo h($insignia['Descripcion']); ?></div>
-                                        <div class="hv-logro-tiempo mt-1">Obtenida el <?php echo h(fecha_corta($insignia['ObtenidaEn'])); ?></div>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
+                    <div class="pb-3"></div>
+                    <script>
+                        // Filtro de insignias: todas, ganadas o por ganar
+                        document.querySelectorAll('#filtroInsignias [data-filtro]').forEach(function (boton) {
+                            boton.addEventListener('click', function () {
+                                var filtro = boton.dataset.filtro;
+                                document.querySelectorAll('#filtroInsignias .nav-link').forEach(function (b) { b.classList.toggle('active', b === boton); });
+                                document.querySelectorAll('.hv-insignia-columna').forEach(function (c) {
+                                    c.classList.toggle('d-none', filtro !== 'todas' && c.dataset.estado !== filtro);
+                                });
+                                var visibles = 0;
+                                document.querySelectorAll('.hv-grupo-insignias').forEach(function (g) {
+                                    var n = g.querySelectorAll('.hv-insignia-columna:not(.d-none)').length;
+                                    g.classList.toggle('d-none', n === 0);
+                                    visibles += n;
+                                });
+                                document.getElementById('insigniasSinResultados').classList.toggle('d-none', visibles > 0);
+                            });
+                        });
+                    </script>
                 <?php endif; ?>
             </section>
         </div>

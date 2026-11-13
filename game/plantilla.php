@@ -5,7 +5,7 @@
 require_once __DIR__ . '/estadisticas_comun.php';
 
 // Subir este número al cambiar hv.css para que los navegadores no usen la copia anterior
-define('HV_VERSION_ESTILOS', '8');
+define('HV_VERSION_ESTILOS', '9');
 
 // Portal principal de Hospital Virtual (botón de la barra, pie y página de acceso)
 define('HV_URL_PORTAL', 'https://hospitalvirtual.facmed.unam.mx/');

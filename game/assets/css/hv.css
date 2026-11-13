@@ -332,6 +332,11 @@ h1, h2, h3, h4, h5, h6, .hv-titulo {
 .hv-logros .hv-icono { width: 2.3rem; height: 2.3rem; font-size: 1rem; }
 .hv-logro-tiempo { font-size: .78rem; color: var(--hv-texto-suave); }
 
+/* Catálogo de insignias en Mi avance: las que faltan se ven apagadas */
+.hv-insignia { display: flex; gap: 1rem; padding: 1rem; height: 100%; border-radius: .85rem; background: #fffaf0; border: 1px solid #f3dfb0; }
+.hv-insignia-bloqueada { background: var(--hv-fondo); border-color: var(--hv-borde); opacity: .6; filter: grayscale(1); }
+.hv-insignia-bloqueada .hv-icono { background: #ece8f2; color: var(--hv-texto-suave); }
+
 /* Pasos de "cómo se juega" */
 .hv-paso { padding: 1.5rem; height: 100%; }
 .hv-paso .hv-icono { width: 3.2rem; height: 3.2rem; font-size: 1.5rem; margin-bottom: .9rem; }
