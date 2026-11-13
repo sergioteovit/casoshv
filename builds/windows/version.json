@@ -1,6 +1,6 @@
 {
-  "version": "26.11.10",
-  "build_number": 2,
+  "version": "26.11.12",
+  "build_number": 3,
   "download_url": "https://hospitalvirtual.facmed.unam.mx/dev/casoshv/builds/windows/HospitalVirtual-latest.zip",
-  "changelog": "[26.11.10]: Sesión segura al guardar el avance (tus resultados cuentan en las tablas de posiciones), puntajes, estrellas e insignias en los retos y el caso clínico, conversación por voz con el paciente y pantalla de carga del caso. [26.09.29]: Versión inicial"
+  "changelog": "[26.11.12]: La retroalimentación de tu razonamiento clínico se guarda completa (las 5 dimensiones) y tus respuestas del caso se guardan al salir; puedes consultarlas en Mi avance de la página de estadísticas. [26.11.10]: Sesión segura al guardar el avance (tus resultados cuentan en las tablas de posiciones), puntajes, estrellas e insignias en los retos y el caso clínico, conversación por voz con el paciente y pantalla de carga del caso. [26.09.29]: Versión inicial"
 }
