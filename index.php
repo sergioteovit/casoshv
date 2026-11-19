@@ -181,11 +181,10 @@ hv_encabezado('Inicio', 'inicio');
                 </div>
                 <div class="col-md">
                     <h2 class="h3 mb-2">¿Quieres ver los casos en acción?</h2>
-                    <p class="mb-0">Consulta las posiciones de los estudiantes, sus logros y descarga Hospital Virtual FacMed · Desafío Clínico.</p>
+                    <p class="mb-0">Consulta las posiciones de los estudiantes y sus logros en Hospital Virtual FacMed · Desafío Clínico.</p>
                 </div>
                 <div class="col-md-auto d-flex flex-wrap gap-2">
                     <a href="game/" class="btn btn-oro"><i class="bi bi-trophy me-1"></i>Estadísticas del juego</a>
-                    <a href="game/index.php#descargar" class="btn btn-outline-light"><i class="bi bi-download me-1"></i>Descargar el juego</a>
                 </div>
             </div>
         </div>

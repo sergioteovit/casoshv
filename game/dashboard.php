@@ -11,6 +11,7 @@ if (!isset($_SESSION['UserId'])) {
 
 require_once __DIR__ . '/config_bd.php';
 require_once __DIR__ . '/plantilla.php';
+require_once __DIR__ . '/descarga_juego.php';
 
 header('Cache-Control: no-store');
 
@@ -150,6 +151,8 @@ hv_cabecera('¡Hola, ' . $cuenta['Username'] . '!', 'Este es tu panel de Hospita
             </div>
         <?php endforeach; ?>
     </div>
+
+    <?php hv_seccion_descarga(hv_info_descarga()); ?>
 
     <?php if ($userRole === 'Administrator'): ?>
         <section class="hv-tarjeta mt-5">

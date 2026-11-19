@@ -69,12 +69,13 @@ function hv_encabezado($titulo, $activa = '', $opciones = [])
 
     $enlaces = [
         'posiciones' => ['index.php', 'Posiciones', 'bi-trophy'],
-        'descargar'  => ['index.php#descargar', 'Descargar', 'bi-download'],
     ];
     if ($conSesion) {
         $enlaces['avance'] = ['mi_avance.php', 'Mi avance', 'bi-graph-up-arrow'];
         $enlaces['grupos'] = ['mis_grupos.php', 'Grupos', 'bi-people'];
         $enlaces['panel'] = ['dashboard.php', 'Mi panel', 'bi-grid'];
+        // La descarga del juego solo se ofrece con sesión iniciada
+        $enlaces['descargar'] = ['dashboard.php#descargar', 'Descargar', 'bi-download'];
         if ($esAdmin) {
             $enlaces['admin'] = ['administracion.php', 'Administración', 'bi-shield-lock'];
         }
