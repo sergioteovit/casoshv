@@ -4,6 +4,7 @@ hv_iniciar_sesion();
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/config_bd.php';
+require_once __DIR__ . '/avatar/progreso_unity.php';
 
 try {
     $conn = new PDO("mysql:host=$host;dbname=$db_name", $user, $pass);
@@ -104,10 +105,10 @@ if ($action === 'login') {
             $tokenNuevo = bin2hex(random_bytes(32));
             $conn->exec("DELETE FROM EstSesionesJuego WHERE ExpiraEn < NOW()");
             $stmtToken = $conn->prepare("
-                INSERT INTO EstSesionesJuego (TokenHash, UserId, ExpiraEn)
-                VALUES (?, ?, NOW() + INTERVAL 30 DAY)
+                INSERT INTO EstSesionesJuego (TokenHash, UserId, UltimoModeloCliente, ExpiraEn)
+                VALUES (?, ?, ?, NOW() + INTERVAL 30 DAY)
             ");
-            $stmtToken->execute([hash('sha256', $tokenNuevo), $userRow['UserId']]);
+            $stmtToken->execute([hash('sha256', $tokenNuevo), $userRow['UserId'], avatar_modelo_cliente($userRow['Progress']) ?: null]);
 
             // Cada cuenta conserva sus 10 sesiones más recientes
             $stmtToken = $conn->prepare("
@@ -434,21 +435,31 @@ elseif ($action === 'save_progress') {
     }
 
     try {
+        $conn->beginTransaction();
+        $conservarModelo = $tokenValido && avatar_conservar_modelo($conn, $userId, $token, $progress);
+        $asignacion = ':progress';
+        $parametros = [':progress' => $progress];
+        if ($conservarModelo) {
+            $asignacion = "CASE WHEN JSON_CONTAINS_PATH(Progress, 'one', '$.gender')
+                THEN JSON_SET(:progress, '$.gender', JSON_EXTRACT(Progress, '$.gender'))
+                ELSE JSON_REMOVE(:sinModelo, '$.gender') END";
+            $parametros[':sinModelo'] = $progress;
+        }
         $stmt = $conn->prepare("
             UPDATE PlayerData
-            SET Progress = :progress, 
+            SET Progress = $asignacion,
                 Statistics = :statistics,
                 CasesDataBase = COALESCE(:casesDataBase, CasesDataBase)
             WHERE UserId = :userId
         ");
         
-        $stmt->execute([
-            ':progress'   => $progress,
+        $stmt->execute($parametros + [
             ':statistics' => $statistics,
             ':casesDataBase' => $casesDataBase,
             ':userId'     => $userId
         ]);
 
+        $conn->commit();
         echo json_encode(["success" => true, "message" => "Progreso guardado correctamente."]);
 
         // La partida ya quedó guardada: si esta copia falla, el jugador no debe notarlo.
@@ -465,6 +476,7 @@ elseif ($action === 'save_progress') {
             }
         }
     } catch (PDOException $e) {
+        if ($conn->inTransaction()) $conn->rollBack();
         echo json_encode(["success" => false, "error" => "Error al guardar en la base de datos."]);
     }
 }
