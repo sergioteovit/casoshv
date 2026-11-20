@@ -87,6 +87,7 @@ $nombreJugador = trim((string)($progress['playerName'] ?? ''));
 $accesos = [
     ['mi_avance.php', 'Mi avance', 'Tus retos, estrellas, insignias y tu lugar en la tabla.', 'bi-graph-up-arrow', ''],
     ['index.php', 'Posiciones', 'Las tablas generales, por sistema y del mes.', 'bi-trophy', 'hv-icono-oro'],
+    ['avatar/', 'Mi avatar', 'Personaliza tu avatar en el vestidor.', 'bi-person-bounding-box', 'hv-icono-coral'],
     ['mis_grupos.php', 'Grupos', $userRole === 'Player' ? 'Únete al grupo de tu clase con un código.' : 'Crea grupos y sigue el avance de tus alumnos.', 'bi-people', 'hv-icono-turquesa'],
 ];
 if ($userRole === 'Administrator') {

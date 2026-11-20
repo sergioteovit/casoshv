@@ -291,6 +291,12 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
 
         <div class="col-lg-4">
             <section class="hv-tarjeta p-4 mb-4">
+                <h2 class="h6 mb-2"><i class="bi bi-person-bounding-box me-2 text-primary"></i>Mi avatar</h2>
+                <p class="small text-muted mb-3">Elige el modelo y personaliza tu apariencia, uniforme y aditamentos.</p>
+                <a href="avatar/" class="btn btn-primary btn-sm"><i class="bi bi-palette me-1"></i>Abrir el vestidor</a>
+            </section>
+
+            <section class="hv-tarjeta p-4 mb-4">
                 <h2 class="h6 mb-3"><i class="bi bi-stars me-2 text-warning"></i>Mi medallero</h2>
                 <div class="d-flex flex-column gap-2">
                     <?php foreach ($medallas as $i => $medalla): ?>

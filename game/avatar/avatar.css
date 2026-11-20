@@ -1,29 +1,29 @@
-.vestidor h1, .vestidor h2 {font-family:"Exo 2",sans-serif;font-weight:800}
+.vestidor h1, .vestidor h2 {font-family:var(--hv-fuente-titulos);font-weight:800}
 .vestidor .escenario {position:relative;overflow:hidden;isolation:isolate;margin:0;border-radius:24px;background:radial-gradient(ellipse at 52% 40%,#ffedcc,#dfbd93 68%,#bb9474);height:clamp(420px,65vh,680px);color:#333845}
 .escenario figcaption {position:absolute;z-index:1;top:18px;left:18px;background:#fff9;padding:5px 14px;border-radius:20px;font-weight:700}
 #estudio, #estudio canvas {width:100%;height:100%;display:block}
 #estudio #retrato {object-fit:contain}
 #estudio canvas[hidden], .vestidor [hidden] {display:none!important}
 .camara {position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;white-space:nowrap;border-radius:30px;background:#fff;padding:4px;box-shadow:0 3px 20px #42372922}
-.camara button,.secciones button {border:0;background:transparent;padding:7px 12px;font:inherit;color:#173956}
-.vestidor form {border:1px solid #d0d9e1;border-radius:20px;background:#fff;color:#203750;overflow:hidden}
-.secciones {display:flex;padding:10px;background:#f0f3f7;gap:3px}
+.camara button,.secciones button {border:0;background:transparent;padding:7px 12px;font:inherit;color:var(--hv-morado-oscuro)}
+.vestidor form {border:1px solid var(--hv-borde);border-radius:var(--hv-radio);background:#fff;color:var(--hv-texto);overflow:hidden;box-shadow:var(--hv-sombra)}
+.secciones {display:flex;padding:10px;background:var(--hv-morado-claro);gap:3px}
 .secciones button {flex:1;padding:8px 2px;border-radius:10px;font-weight:700}
-.secciones button[aria-pressed=true] {background:#163654;color:white}
+.secciones button[aria-pressed=true] {background:var(--hv-morado);color:#fff}
 .vestidor section,.vestidor .acciones {padding:22px}
 .vestidor fieldset {margin:16px 0;border:0;padding:0}
 .vestidor legend {font-size:.92rem;font-weight:700;float:none;margin-bottom:7px}
 .vestidor .opciones {display:flex;flex-wrap:wrap;gap:8px}
 .opciones label {position:relative}
 .opciones input {position:absolute;opacity:0;width:1px;height:1px}
-.opciones span {cursor:pointer;border:1px solid #cad3da;display:flex;align-items:center;gap:6px;border-radius:10px;padding:8px 11px}
+.opciones span {cursor:pointer;border:1px solid var(--hv-borde);display:flex;align-items:center;gap:6px;border-radius:10px;padding:8px 11px}
 .opciones b {background:var(--muestra);border:1px solid #0002;width:20px;height:20px;border-radius:50%}
 .opciones input[name=modelo] + span {flex-direction:column;gap:4px;padding:6px;font-size:.85rem}
-.opciones input[name=modelo] + span img {border-radius:6px;background:#f6ede1;object-fit:contain}
-.opciones input:checked + span {box-shadow:inset 0 0 0 2px #244669;background:#edf4fb}
-.opciones input:focus-visible + span {outline:3px solid #a47816;outline-offset:2px}
-.bloqueo {background:#f1f3f5;padding:12px;border-radius:10px;font-size:.9rem}
-.vestidor .acciones {border-top:1px solid #e2e8ee}
+.opciones input[name=modelo] + span img {border-radius:6px;background:var(--hv-fondo);object-fit:contain}
+.opciones input:checked + span {box-shadow:inset 0 0 0 2px var(--hv-morado);background:var(--hv-morado-claro)}
+.opciones input:focus-visible + span {outline:3px solid var(--hv-turquesa);outline-offset:2px}
+.bloqueo {background:var(--hv-fondo);padding:12px;border-radius:10px;font-size:.9rem}
+.vestidor .acciones {border-top:1px solid var(--hv-borde)}
 #estado:not(:empty) {display:block;margin-bottom:8px}
 @media(max-width:991px) {
     .vestidor .escenario-col {position:sticky;top:3.75rem;z-index:2}
@@ -31,6 +31,6 @@
     .camara {bottom:4px}
     .camara button {padding:3px 9px}
 }
-.ensayo {display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;padding:.65rem .8rem;background:#fff;color:#203750;border:1px solid #d0d9e1;border-radius:14px}
+.ensayo {display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;padding:.65rem .8rem;background:#fff;color:var(--hv-texto);border:1px solid var(--hv-borde);border-radius:var(--hv-radio)}
 .ensayo label {font-weight:700}
 .ensayo select {width:auto;flex:1}

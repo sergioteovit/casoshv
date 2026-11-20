@@ -133,7 +133,7 @@ ob_start();
 hv_encabezado('Vestidor de avatar', 'avance');
 $encabezado = ob_get_clean();
 // Los enlaces del portal son relativos al directorio game/.
-echo str_replace('<head>', '<head><base href="../"><link rel="stylesheet" href="avatar/avatar.css">', $encabezado);
+echo str_replace('<head>', '<head><base href="../"><link rel="stylesheet" href="avatar/avatar.css?v=' . HV_VERSION_ESTILOS . '">', $encabezado);
 $grupos = ['Apariencia' => ['modelo','piel','peinado','cabello'], 'Uniforme' => ['uniforme'], 'Aditamentos' => ['rostro','cuello']];
 $colores = ['clara'=>'#f3c8af','media'=>'#d69a72','morena'=>'#ae714d','oscura'=>'#78503e','negro'=>'#282325',
     'castano'=>'#553428','cobrizo'=>'#9b4931','gris'=>'#a4a09b','verde'=>'#287565','azul'=>'#345f96','vino'=>'#84546e','blanco'=>'#fcfcf7'];
