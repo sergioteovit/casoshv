@@ -189,10 +189,166 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
         <?php endforeach; ?>
     </div>
 
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <section class="hv-tarjeta mb-4">
-                <div class="hv-tarjeta-encabezado"><i class="bi bi-flag me-2 text-primary"></i>Mis retos</div>
+    <?php
+    // Pestañas: cada sección larga va en la suya; el Resumen muestra lo más reciente con enlaces a cada una
+    $pestanas = [
+        'resumen'   => ['Resumen', 'bi-speedometer2', ''],
+        'retos'     => ['Retos', 'bi-flag', (string)count($retos)],
+        'casos'     => ['Casos clínicos', 'bi-chat-square-text', (string)count($casos)],
+        'insignias' => ['Insignias', 'bi-award', $insigniasGanadas . '/' . count($insignias)],
+        'coleccion' => ['Colección', 'bi-briefcase', $objetosObtenidos . '/' . count($objetos)],
+    ];
+    $insigniasRecientes = array_filter($insignias, function ($i) { return $i['ObtenidaEn'] !== null; });
+    usort($insigniasRecientes, function ($a, $b) { return strcmp($b['ObtenidaEn'], $a['ObtenidaEn']); });
+    $insigniasRecientes = array_slice($insigniasRecientes, 0, 4);
+    $retosRecientes = array_slice($retos, 0, 5);
+    $minijuegos = count(array_filter($retos, function ($r) { return $r['Tipo'] !== 'caso'; }));
+    ?>
+    <ul class="nav hv-pestanas mb-4" id="pestanasAvance" role="tablist">
+        <?php foreach ($pestanas as $clave => $p): ?>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link<?php echo $clave === 'resumen' ? ' active' : ''; ?>" id="pestana-<?php echo $clave; ?>"
+                        data-bs-toggle="tab" data-bs-target="#panel-<?php echo $clave; ?>" data-pestana="<?php echo $clave; ?>"
+                        role="tab" aria-controls="panel-<?php echo $clave; ?>" aria-selected="<?php echo $clave === 'resumen' ? 'true' : 'false'; ?>">
+                    <i class="bi <?php echo $p[1]; ?> me-1"></i><?php echo h($p[0]); ?>
+                    <?php if ($p[2] !== ''): ?><span class="badge rounded-pill text-bg-light ms-1"><?php echo h($p[2]); ?></span><?php endif; ?>
+                </button>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Resumen -->
+        <div class="tab-pane fade show active" id="panel-resumen" role="tabpanel" aria-labelledby="pestana-resumen" tabindex="0">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <section class="hv-tarjeta mb-4">
+                        <div class="hv-tarjeta-encabezado d-flex align-items-center">
+                            <span class="me-auto"><i class="bi bi-clock-history me-2 text-primary"></i>Últimos retos</span>
+                            <?php if ($retos): ?>
+                                <button type="button" class="btn btn-link btn-sm p-0" data-ir-pestana="retos">Ver los <?php echo count($retos); ?> <i class="bi bi-arrow-right"></i></button>
+                            <?php endif; ?>
+                        </div>
+                        <?php if (!$retos): ?>
+                            <div class="hv-vacio">
+                                <img src="assets/img/mascota-trofeo.png" alt="">
+                                <div class="fw-bold">Todavía no tienes retos registrados.</div>
+                                <div class="small">Juega un caso clínico o un minijuego y tu resultado aparecerá aquí.</div>
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle hv-tabla mb-0">
+                                    <tbody>
+                                        <?php foreach ($retosRecientes as $reto): ?>
+                                            <tr>
+                                                <td><?php echo hv_celda_reto($reto); ?></td>
+                                                <td class="col-numero fw-bold"><?php echo number_format((int)$reto['MejorPuntaje']); ?></td>
+                                                <td><?php echo hv_nivel($reto['MejorEstrellas']); ?></td>
+                                                <td><?php echo hv_celda_ultimo_intento($reto); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </section>
+
+                    <section class="hv-tarjeta mb-4">
+                        <div class="hv-tarjeta-encabezado d-flex align-items-center">
+                            <span class="me-auto"><i class="bi bi-award me-2 text-primary"></i>Insignias recientes</span>
+                            <button type="button" class="btn btn-link btn-sm p-0" data-ir-pestana="insignias">Ver las <?php echo count($insignias); ?> <i class="bi bi-arrow-right"></i></button>
+                        </div>
+                        <?php if (!$insigniasRecientes): ?>
+                            <div class="hv-vacio">
+                                <i class="bi bi-award"></i>
+                                <div class="fw-bold">Todavía no tienes insignias.</div>
+                                <div class="small">Se ganan por precisión, buen razonamiento clínico y constancia.</div>
+                            </div>
+                        <?php else: ?>
+                            <div class="row g-3 p-3">
+                                <?php foreach ($insigniasRecientes as $insignia): ?>
+                                    <div class="col-sm-6">
+                                        <div class="hv-insignia">
+                                            <span class="hv-icono hv-icono-oro"><i class="bi bi-award-fill"></i></span>
+                                            <div>
+                                                <div class="fw-bold"><?php echo h($insignia['Nombre']); ?></div>
+                                                <div class="small text-muted"><?php echo h($insignia['Descripcion']); ?></div>
+                                                <div class="hv-logro-tiempo mt-1"><i class="bi bi-check-circle-fill text-success me-1"></i>Obtenida el <?php echo h(fecha_corta($insignia['ObtenidaEn'])); ?></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </section>
+                </div>
+
+                <div class="col-lg-4">
+                    <section class="hv-tarjeta p-4 mb-4">
+                        <h2 class="h6 mb-2"><i class="bi bi-person-bounding-box me-2 text-primary"></i>Mi avatar</h2>
+                        <p class="small text-muted mb-2">Elige el modelo y personaliza tu apariencia, uniforme y aditamentos.</p>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Objetos de la colección</span>
+                            <span class="fw-bold"><?php echo $objetosObtenidos; ?> de <?php echo count($objetos); ?></span>
+                        </div>
+                        <div class="progress mb-3" style="height: .5rem" role="progressbar" aria-label="Objetos obtenidos" aria-valuenow="<?php echo $objetosObtenidos; ?>" aria-valuemin="0" aria-valuemax="<?php echo count($objetos); ?>">
+                            <div class="progress-bar bg-success" style="width: <?php echo count($objetos) ? round(100 * $objetosObtenidos / count($objetos)) : 0; ?>%"></div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="avatar/" class="btn btn-primary btn-sm"><i class="bi bi-palette me-1"></i>Abrir el vestidor</a>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-ir-pestana="coleccion"><i class="bi bi-briefcase me-1"></i>Ver colección</button>
+                        </div>
+                    </section>
+
+                    <section class="hv-tarjeta p-4 mb-4">
+                        <h2 class="h6 mb-3"><i class="bi bi-stars me-2 text-warning"></i>Mi medallero</h2>
+                        <div class="d-flex flex-column gap-2">
+                            <?php foreach ($medallas as $i => $medalla): ?>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <?php echo hv_nivel($i + 1); ?>
+                                    <span class="fw-bold"><?php echo (int)$jugador[$medalla]; ?> <span class="text-muted fw-normal small"><?php echo (int)$jugador[$medalla] === 1 ? 'reto' : 'retos'; ?></span></span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+
+                    <section class="hv-tarjeta p-4">
+                        <h2 class="h6 mb-2"><i class="bi bi-eye me-2 text-primary"></i>Tablas de posiciones</h2>
+                        <?php if (!$participa): ?>
+                            <p class="mb-0 text-muted small">Esta cuenta no participa en las tablas de posiciones.</p>
+                        <?php else: ?>
+                            <p class="small mb-3">
+                                <?php echo $mostrar
+                                    ? 'Tu nombre de usuario aparece en las tablas públicas de posiciones.'
+                                    : 'Tu nombre de usuario no aparece en las tablas públicas de posiciones.'; ?>
+                                Tus resultados se guardan igual.
+                            </p>
+                            <form method="POST">
+                                <input type="hidden" name="csrf_token" value="<?php echo h(hv_token_csrf()); ?>">
+                                <input type="hidden" name="mostrar" value="<?php echo $mostrar ? '0' : '1'; ?>">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi <?php echo $mostrar ? 'bi-eye-slash' : 'bi-eye'; ?> me-1"></i><?php echo $mostrar ? 'No aparecer en las posiciones' : 'Aparecer en las posiciones'; ?>
+                                </button>
+                            </form>
+                        <?php endif; ?>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- Retos -->
+        <div class="tab-pane fade" id="panel-retos" role="tabpanel" aria-labelledby="pestana-retos" tabindex="0">
+            <section class="hv-tarjeta">
+                <div class="hv-tarjeta-encabezado d-flex flex-wrap align-items-center gap-2">
+                    <span class="me-auto"><i class="bi bi-flag me-2 text-primary"></i>Mis retos</span>
+                    <?php if ($retos): ?>
+                        <ul class="nav hv-pestanas" id="filtroRetos">
+                            <li class="nav-item"><button type="button" class="nav-link active" data-filtro="todos">Todos (<?php echo count($retos); ?>)</button></li>
+                            <li class="nav-item"><button type="button" class="nav-link" data-filtro="minijuego">Minijuegos (<?php echo $minijuegos; ?>)</button></li>
+                            <li class="nav-item"><button type="button" class="nav-link" data-filtro="caso">Casos clínicos (<?php echo count($retos) - $minijuegos; ?>)</button></li>
+                        </ul>
+                    <?php endif; ?>
+                </div>
                 <?php if (!$retos): ?>
                     <div class="hv-vacio">
                         <img src="assets/img/mascota-trofeo.png" alt="">
@@ -201,7 +357,7 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle hv-tabla">
+                        <table class="table table-hover align-middle hv-tabla mb-0">
                             <thead>
                                 <tr>
                                     <th style="min-width: 13rem">Reto</th>
@@ -213,7 +369,7 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
                             </thead>
                             <tbody>
                                 <?php foreach ($retos as $reto): ?>
-                                    <tr>
+                                    <tr data-tipo="<?php echo $reto['Tipo'] === 'caso' ? 'caso' : 'minijuego'; ?>">
                                         <td><?php echo hv_celda_reto($reto); ?></td>
                                         <td class="col-numero fw-bold"><?php echo number_format((int)$reto['MejorPuntaje']); ?></td>
                                         <td><?php echo hv_nivel($reto['MejorEstrellas']); ?></td>
@@ -226,9 +382,15 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
                     </div>
                 <?php endif; ?>
             </section>
+        </div>
 
+        <!-- Casos clínicos -->
+        <div class="tab-pane fade" id="panel-casos" role="tabpanel" aria-labelledby="pestana-casos" tabindex="0">
             <?php hv_tarjeta_casos($casos, 'Mis casos clínicos', 'Todavía no hay casos clínicos con respuestas guardadas.', 'mis-casos'); ?>
+        </div>
 
+        <!-- Insignias -->
+        <div class="tab-pane fade" id="panel-insignias" role="tabpanel" aria-labelledby="pestana-insignias" tabindex="0">
             <section class="hv-tarjeta">
                 <div class="hv-tarjeta-encabezado d-flex flex-wrap align-items-center gap-2">
                     <span class="me-auto"><i class="bi bi-award me-2 text-primary"></i>Mis insignias</span>
@@ -250,14 +412,12 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
                             <li class="nav-item"><button type="button" class="nav-link" data-filtro="pendiente">Por ganar (<?php echo count($insignias) - $insigniasGanadas; ?>)</button></li>
                         </ul>
                     </div>
-                    <?php
-                    foreach ($gruposInsignias as $idReto => $grupo):
-                    ?>
+                    <?php foreach ($gruposInsignias as $idReto => $grupo): ?>
                         <div class="hv-grupo-insignias px-3 pt-3">
                             <h3 class="h6 text-muted mb-2"><?php echo h($nombresGrupos[$idReto]); ?></h3>
                             <div class="row g-3">
                                 <?php foreach ($grupo as $insignia): $ganada = $insignia['ObtenidaEn'] !== null; ?>
-                                    <div class="col-sm-6 hv-insignia-columna" data-estado="<?php echo $ganada ? 'ganada' : 'pendiente'; ?>">
+                                    <div class="col-sm-6 col-xl-4 hv-insignia-columna" data-estado="<?php echo $ganada ? 'ganada' : 'pendiente'; ?>">
                                         <div class="hv-insignia<?php echo $ganada ? '' : ' hv-insignia-bloqueada'; ?>">
                                             <span class="hv-icono <?php echo $ganada ? 'hv-icono-oro' : ''; ?>"><i class="bi <?php echo $ganada ? 'bi-award-fill' : 'bi-lock-fill'; ?>"></i></span>
                                             <div>
@@ -283,101 +443,109 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
                         <div class="small">Se ganan por precisión, buen razonamiento clínico y constancia.</div>
                     </div>
                     <div class="pb-3"></div>
-                    <script>
-                        // Filtro de insignias: todas, ganadas o por ganar
-                        document.querySelectorAll('#filtroInsignias [data-filtro]').forEach(function (boton) {
-                            boton.addEventListener('click', function () {
-                                var filtro = boton.dataset.filtro;
-                                document.querySelectorAll('#filtroInsignias .nav-link').forEach(function (b) { b.classList.toggle('active', b === boton); });
-                                document.querySelectorAll('.hv-insignia-columna').forEach(function (c) {
-                                    c.classList.toggle('d-none', filtro !== 'todas' && c.dataset.estado !== filtro);
-                                });
-                                var visibles = 0;
-                                document.querySelectorAll('.hv-grupo-insignias').forEach(function (g) {
-                                    var n = g.querySelectorAll('.hv-insignia-columna:not(.d-none)').length;
-                                    g.classList.toggle('d-none', n === 0);
-                                    visibles += n;
-                                });
-                                document.getElementById('insigniasSinResultados').classList.toggle('d-none', visibles > 0);
-                            });
-                        });
-                    </script>
                 <?php endif; ?>
             </section>
         </div>
 
-        <div class="col-lg-4">
-            <section class="hv-tarjeta p-4 mb-4">
-                <h2 class="h6 mb-2"><i class="bi bi-person-bounding-box me-2 text-primary"></i>Mi avatar</h2>
-                <p class="small text-muted mb-3">Elige el modelo y personaliza tu apariencia, uniforme y aditamentos.</p>
-                <a href="avatar/" class="btn btn-primary btn-sm"><i class="bi bi-palette me-1"></i>Abrir el vestidor</a>
-            </section>
-
-            <section class="hv-tarjeta p-4 mb-4">
-                <h2 class="h6 mb-1 d-flex align-items-center">
+        <!-- Colección del avatar -->
+        <div class="tab-pane fade" id="panel-coleccion" role="tabpanel" aria-labelledby="pestana-coleccion" tabindex="0">
+            <section class="hv-tarjeta">
+                <div class="hv-tarjeta-encabezado d-flex flex-wrap align-items-center gap-2">
                     <span class="me-auto"><i class="bi bi-briefcase me-2 text-primary"></i>Mi colección</span>
-                    <span class="small text-muted fw-normal"><?php echo $objetosObtenidos; ?> de <?php echo count($objetos); ?></span>
-                </h2>
-                <p class="small text-muted mb-2">Objetos para tu avatar que ganas en el juego: en retos, en casos clínicos o recorriendo los pisos del hospital.</p>
-                <div class="progress mb-3" style="height: .5rem" role="progressbar" aria-label="Objetos obtenidos" aria-valuenow="<?php echo $objetosObtenidos; ?>" aria-valuemin="0" aria-valuemax="<?php echo count($objetos); ?>">
-                    <div class="progress-bar bg-success" style="width: <?php echo count($objetos) ? round(100 * $objetosObtenidos / count($objetos)) : 0; ?>%"></div>
+                    <span class="small text-muted fw-normal"><?php echo $objetosObtenidos; ?> de <?php echo count($objetos); ?> objetos</span>
+                    <a href="avatar/" class="btn btn-primary btn-sm"><i class="bi bi-palette me-1"></i>Abrir el vestidor</a>
                 </div>
-                <ul class="list-unstyled mb-0 hv-coleccion">
-                    <?php foreach ($objetos as $objeto): ?>
-                        <li class="d-flex gap-2 py-2<?php echo $objeto['obtenido'] ? '' : ' text-muted'; ?>" title="<?php echo h($objeto['descripcion']); ?>">
-                            <i class="bi <?php echo $objeto['obtenido'] ? 'bi-check-circle-fill text-success' : 'bi-lock-fill'; ?> mt-1"></i>
-                            <div>
-                                <div class="fw-semibold small"><?php echo h($objeto['nombre']); ?></div>
-                                <div class="small">
-                                    <?php if ($objeto['obtenido']): ?>
-                                        <?php echo h($objeto['descripcion']); ?>
-                                        <?php if ($objeto['fecha'] !== ''): ?>
-                                            <span class="hv-logro-tiempo d-block">Obtenido el <?php echo h(fecha_corta($objeto['fecha'])); ?></span>
+                <div class="p-3">
+                    <p class="small text-muted mb-2">Objetos para tu avatar que ganas en el juego: en retos, en casos clínicos o recorriendo los pisos del hospital.</p>
+                    <div class="progress mb-3" style="height: .5rem" role="progressbar" aria-label="Objetos obtenidos" aria-valuenow="<?php echo $objetosObtenidos; ?>" aria-valuemin="0" aria-valuemax="<?php echo count($objetos); ?>">
+                        <div class="progress-bar bg-success" style="width: <?php echo count($objetos) ? round(100 * $objetosObtenidos / count($objetos)) : 0; ?>%"></div>
+                    </div>
+                    <div class="row g-3">
+                        <?php foreach ($objetos as $objeto): ?>
+                            <div class="col-sm-6 col-xl-4">
+                                <div class="hv-insignia<?php echo $objeto['obtenido'] ? '' : ' hv-insignia-bloqueada'; ?>">
+                                    <span class="hv-icono <?php echo $objeto['obtenido'] ? 'hv-icono-turquesa' : ''; ?>"><i class="bi <?php echo $objeto['obtenido'] ? 'bi-bag-check-fill' : 'bi-lock-fill'; ?>"></i></span>
+                                    <div>
+                                        <div class="fw-bold"><?php echo h($objeto['nombre']); ?></div>
+                                        <?php if ($objeto['obtenido']): ?>
+                                            <div class="small text-muted"><?php echo h($objeto['descripcion']); ?></div>
+                                            <?php if ($objeto['fecha'] !== ''): ?>
+                                                <div class="hv-logro-tiempo mt-1"><i class="bi bi-check-circle-fill text-success me-1"></i>Obtenido el <?php echo h(fecha_corta($objeto['fecha'])); ?></div>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <div class="small text-muted"><i class="bi bi-lightbulb me-1"></i><?php echo h($objeto['pista']); ?></div>
                                         <?php endif; ?>
-                                    <?php else: ?>
-                                        <i class="bi bi-lightbulb me-1"></i><?php echo h($objeto['pista']); ?>
-                                    <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </section>
-
-            <section class="hv-tarjeta p-4 mb-4">
-                <h2 class="h6 mb-3"><i class="bi bi-stars me-2 text-warning"></i>Mi medallero</h2>
-                <div class="d-flex flex-column gap-2">
-                    <?php foreach ($medallas as $i => $medalla): ?>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <?php echo hv_nivel($i + 1); ?>
-                            <span class="fw-bold"><?php echo (int)$jugador[$medalla]; ?> <span class="text-muted fw-normal small"><?php echo (int)$jugador[$medalla] === 1 ? 'reto' : 'retos'; ?></span></span>
-                        </div>
-                    <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </section>
-
-            <section class="hv-tarjeta p-4">
-                <h2 class="h6 mb-2"><i class="bi bi-eye me-2 text-primary"></i>Tablas de posiciones</h2>
-                <?php if (!$participa): ?>
-                    <p class="mb-0 text-muted small">Esta cuenta no participa en las tablas de posiciones.</p>
-                <?php else: ?>
-                    <p class="small mb-3">
-                        <?php echo $mostrar
-                            ? 'Tu nombre de usuario aparece en las tablas públicas de posiciones.'
-                            : 'Tu nombre de usuario no aparece en las tablas públicas de posiciones.'; ?>
-                        Tus resultados se guardan igual.
-                    </p>
-                    <form method="POST">
-                        <input type="hidden" name="csrf_token" value="<?php echo h(hv_token_csrf()); ?>">
-                        <input type="hidden" name="mostrar" value="<?php echo $mostrar ? '0' : '1'; ?>">
-                        <button type="submit" class="btn btn-outline-primary btn-sm">
-                            <i class="bi <?php echo $mostrar ? 'bi-eye-slash' : 'bi-eye'; ?> me-1"></i><?php echo $mostrar ? 'No aparecer en las posiciones' : 'Aparecer en las posiciones'; ?>
-                        </button>
-                    </form>
-                <?php endif; ?>
             </section>
         </div>
     </div>
+
+    <script>
+        (function () {
+            // Pestañas: la elegida se guarda en la URL (#retos, #insignias…) para recargar o compartir el enlace
+            function mostrarPestana(clave) {
+                var boton = document.querySelector('#pestanasAvance [data-pestana="' + clave + '"]');
+                if (boton && window.bootstrap) {
+                    bootstrap.Tab.getOrCreateInstance(boton).show();
+                }
+                return boton;
+            }
+            document.querySelectorAll('#pestanasAvance [data-pestana]').forEach(function (boton) {
+                boton.addEventListener('shown.bs.tab', function () {
+                    history.replaceState(null, '', boton.dataset.pestana === 'resumen' ? location.pathname : '#' + boton.dataset.pestana);
+                });
+            });
+            document.querySelectorAll('[data-ir-pestana]').forEach(function (enlace) {
+                enlace.addEventListener('click', function () {
+                    var boton = mostrarPestana(enlace.dataset.irPestana);
+                    if (boton) {
+                        document.getElementById('pestanasAvance').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
+            // Bootstrap se carga al final de la página: la pestaña de la URL se abre cuando ya está listo
+            document.addEventListener('DOMContentLoaded', function () {
+                var inicial = location.hash.replace('#', '');
+                if (inicial) {
+                    mostrarPestana(inicial);
+                }
+            });
+
+            // Filtro de retos: todos, minijuegos o casos clínicos
+            document.querySelectorAll('#filtroRetos [data-filtro]').forEach(function (boton) {
+                boton.addEventListener('click', function () {
+                    var filtro = boton.dataset.filtro;
+                    document.querySelectorAll('#filtroRetos .nav-link').forEach(function (b) { b.classList.toggle('active', b === boton); });
+                    document.querySelectorAll('#panel-retos tr[data-tipo]').forEach(function (fila) {
+                        fila.classList.toggle('d-none', filtro !== 'todos' && fila.dataset.tipo !== filtro);
+                    });
+                });
+            });
+
+            // Filtro de insignias: todas, ganadas o por ganar
+            document.querySelectorAll('#filtroInsignias [data-filtro]').forEach(function (boton) {
+                boton.addEventListener('click', function () {
+                    var filtro = boton.dataset.filtro;
+                    document.querySelectorAll('#filtroInsignias .nav-link').forEach(function (b) { b.classList.toggle('active', b === boton); });
+                    document.querySelectorAll('.hv-insignia-columna').forEach(function (c) {
+                        c.classList.toggle('d-none', filtro !== 'todas' && c.dataset.estado !== filtro);
+                    });
+                    var visibles = 0;
+                    document.querySelectorAll('.hv-grupo-insignias').forEach(function (g) {
+                        var n = g.querySelectorAll('.hv-insignia-columna:not(.d-none)').length;
+                        g.classList.toggle('d-none', n === 0);
+                        visibles += n;
+                    });
+                    document.getElementById('insigniasSinResultados').classList.toggle('d-none', visibles > 0);
+                });
+            });
+        })();
+    </script>
 </main>
 <?php hv_pie(); ?>
 </body>

@@ -52,7 +52,7 @@ function hv_celda_ultimo_intento($reto)
 {
     if (!empty($reto['UltimaFecha']) && $reto['UltimoPuntaje'] !== null) {
         $victoria = (int)$reto['UltimaVictoria'] === 1;
-        return '<div class="fw-semibold">' . number_format((int)$reto['UltimoPuntaje']) . ' pts · '
+        return '<div class="fw-semibold text-nowrap">' . number_format((int)$reto['UltimoPuntaje']) . ' pts · '
             . ($victoria ? '<span class="text-success">Victoria</span>' : '<span class="text-danger">Derrota</span>')
             . '</div><div>' . hv_nivel($reto['UltimasEstrellas']) . '</div>'
             . '<div class="small text-muted">' . h(fecha_corta($reto['UltimaFecha'])) . '</div>';
