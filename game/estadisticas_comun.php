@@ -36,6 +36,7 @@ function est_nombre_sistema($clave)
         'reproductorfemenino'  => 'Reproductor femenino',
         'reproductormasculino' => 'Reproductor masculino',
         'respiratorio'         => 'Respiratorio',
+        'sentidos'             => 'Órganos de los sentidos',
         'tegumentario'         => 'Tegumentario',
         'urinario'             => 'Urinario',
     ];

@@ -8,14 +8,60 @@ require_once __DIR__ . '/estadisticas_comun.php';
 function est_retos_alumno($conn, $userId)
 {
     $stmt = $conn->prepare("
-        SELECT t.Titulo, t.Tipo, t.Sistema, r.MejorPuntaje, r.MejorEstrellas, r.Intentos, r.Victorias, r.ActualizadoEn
+        SELECT t.Titulo, t.Tipo, t.Sistema, r.MejorPuntaje, r.MejorEstrellas, r.Intentos, r.Victorias, r.ActualizadoEn,
+               r.Inicios, r.UltimoPuntaje, r.UltimasEstrellas, r.UltimaVictoria, r.UltimaFecha
         FROM EstResultadosReto r
         JOIN EstRetos t ON t.IdReto = r.IdReto
         WHERE r.UserId = ?
-        ORDER BY r.ActualizadoEn DESC
+        ORDER BY COALESCE(r.UltimaFecha, r.ActualizadoEn) DESC
     ");
     $stmt->execute([$userId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Celda «Reto» de las tablas de retos: título, tipo y sistema (sin columna aparte, para que la tabla quepa)
+function hv_celda_reto($reto)
+{
+    $esCaso = $reto['Tipo'] === 'caso';
+    $html = '<div class="fw-semibold">' . h($reto['Titulo']) . '</div>'
+        . '<span class="hv-chip' . ($esCaso ? '' : ' hv-chip-turquesa') . '">' . ($esCaso ? 'Caso clínico' : 'Minijuego') . '</span>';
+    if (!empty($reto['Sistema'])) {
+        $html .= ' <span class="small text-muted">' . h(est_nombre_sistema($reto['Sistema'])) . '</span>';
+    }
+    return $html;
+}
+
+// Celda «Intentos» de las tablas de retos: terminados, ganados y, si los hay, los que se abrieron sin terminar
+function hv_celda_intentos($reto)
+{
+    $intentos = (int)$reto['Intentos'];
+    $victorias = (int)$reto['Victorias'];
+    $inicios = (int)($reto['Inicios'] ?? 0);
+    $html = '<div class="fw-semibold">' . number_format($intentos) . '</div>'
+        . '<div class="small text-muted">' . number_format($victorias) . ($victorias === 1 ? ' ganado' : ' ganados') . '</div>';
+    if ($inicios > $intentos) {
+        $html .= '<div class="small text-muted" title="Veces que se abrió el reto">de '
+            . number_format($inicios) . ' inicios</div>';
+    }
+    return $html;
+}
+
+// Celda «Último intento»: puntaje, nivel y resultado del último intento terminado (juego 26.11.23 o
+// posterior); para registros anteriores, solo la fecha de la última actualización
+function hv_celda_ultimo_intento($reto)
+{
+    if (!empty($reto['UltimaFecha']) && $reto['UltimoPuntaje'] !== null) {
+        $victoria = (int)$reto['UltimaVictoria'] === 1;
+        return '<div class="fw-semibold">' . number_format((int)$reto['UltimoPuntaje']) . ' pts · '
+            . ($victoria ? '<span class="text-success">Victoria</span>' : '<span class="text-danger">Derrota</span>')
+            . '</div><div>' . hv_nivel($reto['UltimasEstrellas']) . '</div>'
+            . '<div class="small text-muted">' . h(fecha_corta($reto['UltimaFecha'])) . '</div>';
+    }
+    if ((int)$reto['Intentos'] === 0 && (int)($reto['Inicios'] ?? 0) > 0) {
+        return '<div class="small">Iniciado, sin terminar</div>'
+            . '<div class="small text-muted">' . h(fecha_corta($reto['ActualizadoEn'])) . '</div>';
+    }
+    return '<div class="small text-muted">' . h(fecha_corta($reto['ActualizadoEn'])) . '</div>';
 }
 
 // Casos clínicos con respuestas, con el mejor resultado del caso si lo hay
@@ -96,28 +142,21 @@ function hv_tarjeta_retos($retos, $titulo = 'Retos', $textoVacio = 'Sin retos re
             <table class="table table-hover align-middle hv-tabla">
                 <thead>
                     <tr>
-                        <th>Reto</th>
-                        <th>Sistema</th>
+                        <th style="min-width: 13rem">Reto</th>
                         <th class="col-numero">Mejor puntaje</th>
                         <th>Nivel</th>
                         <th class="col-numero">Intentos</th>
-                        <th class="col-numero">Victorias</th>
-                        <th>Última vez</th>
+                        <th>Último intento</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($retos as $reto): ?>
                         <tr>
-                            <td>
-                                <div class="fw-semibold"><?php echo h($reto['Titulo']); ?></div>
-                                <span class="hv-chip<?php echo $reto['Tipo'] === 'caso' ? '' : ' hv-chip-turquesa'; ?>"><?php echo $reto['Tipo'] === 'caso' ? 'Caso clínico' : 'Minijuego'; ?></span>
-                            </td>
-                            <td><?php echo h(est_nombre_sistema($reto['Sistema'])); ?></td>
+                            <td><?php echo hv_celda_reto($reto); ?></td>
                             <td class="col-numero fw-bold"><?php echo number_format((int)$reto['MejorPuntaje']); ?></td>
                             <td><?php echo hv_nivel($reto['MejorEstrellas']); ?></td>
-                            <td class="col-numero"><?php echo number_format((int)$reto['Intentos']); ?></td>
-                            <td class="col-numero"><?php echo number_format((int)$reto['Victorias']); ?></td>
-                            <td class="text-muted small"><?php echo h(fecha_corta($reto['ActualizadoEn'])); ?></td>
+                            <td class="col-numero"><?php echo hv_celda_intentos($reto); ?></td>
+                            <td><?php echo hv_celda_ultimo_intento($reto); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

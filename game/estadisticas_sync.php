@@ -25,24 +25,51 @@ function est_registrar_descarte($conn, $userId, $idReto, $motivo, $detalle)
     $stmt->execute([$userId, $idReto, $motivo, substr((string)$detalle, 0, 500)]);
 }
 
+// Fecha del juego (ISO 8601 en UTC, p. ej. 2026-11-23T14:02:03.1234567Z) en el reloj de MySQL,
+// el mismo de las demás fechas de las tablas ($desfase = segundos entre NOW() y UTC_TIMESTAMP()).
+// Devuelve null si no es válida o está en el futuro.
+function est_fecha_juego($valor, $desfase)
+{
+    if (!is_string($valor) || !preg_match('/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/', $valor, $m)) {
+        return null;
+    }
+    try {
+        $fecha = new DateTimeImmutable($m[1] . ' ' . $m[2], new DateTimeZone('UTC'));
+    } catch (Exception $e) {
+        return null;
+    }
+    if ($fecha->getTimestamp() > time() + 86400) {
+        return null;
+    }
+    return $fecha->modify(($desfase >= 0 ? '+' : '') . (int)$desfase . ' seconds')->format('Y-m-d H:i:s');
+}
+
 function est_sincronizar_retos($conn, $userId, $resultados, $registrarMejoras)
 {
     $maximos = $conn->query("SELECT IdReto, PuntajeMaximo FROM EstRetos")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $desfase = (int)$conn->query("SELECT TIMESTAMPDIFF(SECOND, UTC_TIMESTAMP(), NOW())")->fetchColumn();
 
     $consulta = $conn->prepare("
-        SELECT MejorPuntaje, MejorEstrellas, Intentos, Victorias
+        SELECT MejorPuntaje, MejorEstrellas, Intentos, Victorias,
+               Inicios, UltimoPuntaje, UltimasEstrellas, UltimaVictoria, UltimaFecha
         FROM EstResultadosReto
         WHERE UserId = ? AND IdReto = ?
         FOR UPDATE
     ");
     $guardar = $conn->prepare("
-        INSERT INTO EstResultadosReto (UserId, IdReto, MejorPuntaje, MejorEstrellas, Intentos, Victorias)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO EstResultadosReto (UserId, IdReto, MejorPuntaje, MejorEstrellas, Intentos, Victorias,
+                                       Inicios, UltimoPuntaje, UltimasEstrellas, UltimaVictoria, UltimaFecha)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             MejorPuntaje = VALUES(MejorPuntaje),
             MejorEstrellas = VALUES(MejorEstrellas),
             Intentos = VALUES(Intentos),
-            Victorias = VALUES(Victorias)
+            Victorias = VALUES(Victorias),
+            Inicios = VALUES(Inicios),
+            UltimoPuntaje = VALUES(UltimoPuntaje),
+            UltimasEstrellas = VALUES(UltimasEstrellas),
+            UltimaVictoria = VALUES(UltimaVictoria),
+            UltimaFecha = VALUES(UltimaFecha)
     ");
     $mejora = $conn->prepare("
         INSERT INTO EstMejoras (UserId, IdReto, PuntosGanados, PuntajeNuevo, EstrellasNuevas)
@@ -92,12 +119,39 @@ function est_sincronizar_retos($conn, $userId, $resultados, $registrarMejoras)
         $intentosNuevos = max($intentosPrevios, $intentos);
         $victoriasNueva = max($victoriasPrevia, $victorias);
 
+        // Inicios y último intento (juego 26.11.23 o posterior; las versiones anteriores no los envían).
+        // Los inicios nunca bajan; el último intento solo se reemplaza por uno más reciente y válido.
+        $iniciosPrevios = $previo ? (int)$previo['Inicios'] : 0;
+        $inicios = est_entero($r['inicios'] ?? null);
+        $iniciosNuevos = ($inicios !== null && $inicios > $iniciosPrevios) ? $inicios : $iniciosPrevios;
+
+        $ultimo = [
+            $previo ? $previo['UltimoPuntaje'] : null,
+            $previo ? $previo['UltimasEstrellas'] : null,
+            $previo ? $previo['UltimaVictoria'] : null,
+            $previo ? $previo['UltimaFecha'] : null,
+        ];
+        $fechaUltimo = est_fecha_juego($r['ultimaFecha'] ?? null, $desfase);
+        $puntajeUltimo = est_entero($r['ultimoPuntaje'] ?? null);
+        $estrellasUltimo = est_entero($r['ultimasEstrellas'] ?? null);
+        if ($fechaUltimo !== null && $puntajeUltimo !== null && $estrellasUltimo !== null
+            && $puntajeUltimo >= 0 && $puntajeUltimo <= (int)$maximos[$idReto]
+            && $estrellasUltimo >= 0 && $estrellasUltimo <= 5
+            && ($ultimo[3] === null || $fechaUltimo > $ultimo[3])) {
+            $ultimo = [$puntajeUltimo, $estrellasUltimo, !empty($r['ultimaVictoria']) ? 1 : 0, $fechaUltimo];
+        }
+        $ultimoCambio = !$previo || $ultimo[3] !== $previo['UltimaFecha'];
+
         if ($previo && $puntajeNuevo === $puntajePrevio && $estrellasNueva === $estrellasPrevia
-            && $intentosNuevos === $intentosPrevios && $victoriasNueva === $victoriasPrevia) {
+            && $intentosNuevos === $intentosPrevios && $victoriasNueva === $victoriasPrevia
+            && $iniciosNuevos === $iniciosPrevios && !$ultimoCambio) {
             continue;
         }
 
-        $guardar->execute([$userId, $idReto, $puntajeNuevo, $estrellasNueva, $intentosNuevos, $victoriasNueva]);
+        $guardar->execute(array_merge(
+            [$userId, $idReto, $puntajeNuevo, $estrellasNueva, $intentosNuevos, $victoriasNueva, $iniciosNuevos],
+            $ultimo
+        ));
 
         if ($registrarMejoras && ($puntajeNuevo > $puntajePrevio || $estrellasNueva > $estrellasPrevia)) {
             $mejora->execute([$userId, $idReto, $puntajeNuevo - $puntajePrevio, $puntajeNuevo, $estrellasNueva]);

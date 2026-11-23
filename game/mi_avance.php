@@ -95,33 +95,58 @@ try {
         $posicion = (int)$stmt->fetchColumn();
     }
 
-    $stmt = $conn->prepare("
-        SELECT t.Titulo, t.Tipo, t.Sistema, r.MejorPuntaje, r.MejorEstrellas, r.Intentos, r.Victorias, r.ActualizadoEn
-        FROM EstResultadosReto r
-        JOIN EstRetos t ON t.IdReto = r.IdReto
-        WHERE r.UserId = ?
-        ORDER BY r.ActualizadoEn DESC
-    ");
+    $retos = est_retos_alumno($conn, $userId);
+
+    // Colección del avatar: catálogo del juego + estado guardado en PlayerData.Progress.avatar.objetos
+    $catalogoObjetos = require __DIR__ . '/catalogo_objetos_avatar.php';
+    $stmt = $conn->prepare("SELECT Progress FROM PlayerData WHERE UserId = ?");
     $stmt->execute([$userId]);
-    $retos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $progreso = json_decode((string)$stmt->fetchColumn(), true);
+    $estadoObjetos = [];
+    foreach (($progreso['avatar']['objetos'] ?? []) as $o) {
+        if (is_array($o) && is_string($o['id'] ?? null) && !empty($o['obtenido'])) {
+            $estadoObjetos[$o['id']] = is_string($o['fecha'] ?? null) ? $o['fecha'] : '';
+        }
+    }
+    // Primero los obtenidos y después los que faltan, cada grupo en el orden del catálogo
+    $obtenidos = [];
+    $faltantes = [];
+    foreach ($catalogoObjetos as $id => $definicion) {
+        if (isset($estadoObjetos[$id])) {
+            // La fecha del juego es ISO 8601 en UTC; basta con el día
+            $obtenidos[] = $definicion + ['obtenido' => true, 'fecha' => substr($estadoObjetos[$id], 0, 10)];
+        } else {
+            $faltantes[] = $definicion + ['obtenido' => false, 'fecha' => ''];
+        }
+    }
+    $objetos = array_merge($obtenidos, $faltantes);
+    $objetosObtenidos = count($obtenidos);
 
     $stmt = $conn->prepare("
-        SELECT i.IdInsignia, i.Nombre, i.Descripcion, i.IdReto, ij.ObtenidaEn
+        SELECT i.IdInsignia, i.Nombre, i.Descripcion, i.IdReto, t.Titulo AS TituloReto, ij.ObtenidaEn
         FROM EstInsignias i
+        LEFT JOIN EstRetos t ON t.IdReto = i.IdReto
         LEFT JOIN EstInsigniasJugador ij ON ij.IdInsignia = i.IdInsignia AND ij.UserId = ?
         WHERE i.Activa = 1 OR ij.UserId IS NOT NULL
-        ORDER BY i.IdReto = 'level' DESC, i.IdReto, i.IdInsignia LIKE 'CASO\\_Especialista\\_%', i.Nombre
+        ORDER BY i.IdReto = 'level' DESC, COALESCE(t.Titulo, i.IdReto), i.IdInsignia LIKE 'CASO\\_Especialista\\_%', i.Nombre
     ");
     $stmt->execute([$userId]);
     // Catálogo completo; las que aún no gana llevan ObtenidaEn nulo
     $insignias = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $insigniasGanadas = 0;
+    $nombresGrupos = [];
     $gruposInsignias = [];
     foreach ($insignias as $insignia) {
         if ($insignia['ObtenidaEn'] !== null) {
             $insigniasGanadas++;
         }
-        $gruposInsignias[(string)$insignia['IdReto']][] = $insignia;
+        $idGrupo = (string)$insignia['IdReto'];
+        $gruposInsignias[$idGrupo][] = $insignia;
+        // Nombre del grupo: el título del reto en el catálogo; las del caso clínico van juntas
+        if (!isset($nombresGrupos[$idGrupo])) {
+            $nombresGrupos[$idGrupo] = $idGrupo === 'level' ? 'Casos clínicos'
+                : ($insignia['TituloReto'] ?: ($idGrupo !== '' ? $idGrupo : 'Otras'));
+        }
     }
 
     // Lo que escribió en cada caso clínico, con la conversación con el paciente
@@ -179,28 +204,21 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
                         <table class="table table-hover align-middle hv-tabla">
                             <thead>
                                 <tr>
-                                    <th>Reto</th>
-                                    <th>Sistema</th>
+                                    <th style="min-width: 13rem">Reto</th>
                                     <th class="col-numero">Mejor puntaje</th>
                                     <th>Nivel</th>
                                     <th class="col-numero">Intentos</th>
-                                    <th class="col-numero">Victorias</th>
-                                    <th>Última vez</th>
+                                    <th>Último intento</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($retos as $reto): ?>
                                     <tr>
-                                        <td>
-                                            <div class="fw-semibold"><?php echo h($reto['Titulo']); ?></div>
-                                            <span class="hv-chip<?php echo $reto['Tipo'] === 'caso' ? '' : ' hv-chip-turquesa'; ?>"><?php echo $reto['Tipo'] === 'caso' ? 'Caso clínico' : 'Minijuego'; ?></span>
-                                        </td>
-                                        <td><?php echo h(est_nombre_sistema($reto['Sistema'])); ?></td>
+                                        <td><?php echo hv_celda_reto($reto); ?></td>
                                         <td class="col-numero fw-bold"><?php echo number_format((int)$reto['MejorPuntaje']); ?></td>
                                         <td><?php echo hv_nivel($reto['MejorEstrellas']); ?></td>
-                                        <td class="col-numero"><?php echo number_format((int)$reto['Intentos']); ?></td>
-                                        <td class="col-numero"><?php echo number_format((int)$reto['Victorias']); ?></td>
-                                        <td class="text-muted small"><?php echo h(fecha_corta($reto['ActualizadoEn'])); ?></td>
+                                        <td class="col-numero"><?php echo hv_celda_intentos($reto); ?></td>
+                                        <td><?php echo hv_celda_ultimo_intento($reto); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -233,11 +251,10 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
                         </ul>
                     </div>
                     <?php
-                    $nombresGrupos = ['level' => 'Casos clínicos', 'GastroBalance' => 'GastroBalance', 'ColonCommander' => 'Colon Commander'];
                     foreach ($gruposInsignias as $idReto => $grupo):
                     ?>
                         <div class="hv-grupo-insignias px-3 pt-3">
-                            <h3 class="h6 text-muted mb-2"><?php echo h($nombresGrupos[$idReto] ?? ($idReto !== '' ? $idReto : 'Otras')); ?></h3>
+                            <h3 class="h6 text-muted mb-2"><?php echo h($nombresGrupos[$idReto]); ?></h3>
                             <div class="row g-3">
                                 <?php foreach ($grupo as $insignia): $ganada = $insignia['ObtenidaEn'] !== null; ?>
                                     <div class="col-sm-6 hv-insignia-columna" data-estado="<?php echo $ganada ? 'ganada' : 'pendiente'; ?>">
@@ -294,6 +311,37 @@ hv_cabecera('Mi avance', 'Hola, ' . $jugador['Username'] . '. Así vas en el Des
                 <h2 class="h6 mb-2"><i class="bi bi-person-bounding-box me-2 text-primary"></i>Mi avatar</h2>
                 <p class="small text-muted mb-3">Elige el modelo y personaliza tu apariencia, uniforme y aditamentos.</p>
                 <a href="avatar/" class="btn btn-primary btn-sm"><i class="bi bi-palette me-1"></i>Abrir el vestidor</a>
+            </section>
+
+            <section class="hv-tarjeta p-4 mb-4">
+                <h2 class="h6 mb-1 d-flex align-items-center">
+                    <span class="me-auto"><i class="bi bi-briefcase me-2 text-primary"></i>Mi colección</span>
+                    <span class="small text-muted fw-normal"><?php echo $objetosObtenidos; ?> de <?php echo count($objetos); ?></span>
+                </h2>
+                <p class="small text-muted mb-2">Objetos para tu avatar que ganas en el juego: en retos, en casos clínicos o recorriendo los pisos del hospital.</p>
+                <div class="progress mb-3" style="height: .5rem" role="progressbar" aria-label="Objetos obtenidos" aria-valuenow="<?php echo $objetosObtenidos; ?>" aria-valuemin="0" aria-valuemax="<?php echo count($objetos); ?>">
+                    <div class="progress-bar bg-success" style="width: <?php echo count($objetos) ? round(100 * $objetosObtenidos / count($objetos)) : 0; ?>%"></div>
+                </div>
+                <ul class="list-unstyled mb-0 hv-coleccion">
+                    <?php foreach ($objetos as $objeto): ?>
+                        <li class="d-flex gap-2 py-2<?php echo $objeto['obtenido'] ? '' : ' text-muted'; ?>" title="<?php echo h($objeto['descripcion']); ?>">
+                            <i class="bi <?php echo $objeto['obtenido'] ? 'bi-check-circle-fill text-success' : 'bi-lock-fill'; ?> mt-1"></i>
+                            <div>
+                                <div class="fw-semibold small"><?php echo h($objeto['nombre']); ?></div>
+                                <div class="small">
+                                    <?php if ($objeto['obtenido']): ?>
+                                        <?php echo h($objeto['descripcion']); ?>
+                                        <?php if ($objeto['fecha'] !== ''): ?>
+                                            <span class="hv-logro-tiempo d-block">Obtenido el <?php echo h(fecha_corta($objeto['fecha'])); ?></span>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <i class="bi bi-lightbulb me-1"></i><?php echo h($objeto['pista']); ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
             </section>
 
             <section class="hv-tarjeta p-4 mb-4">
