@@ -1,6 +1,9 @@
 config.local.php
 # Los títulos de los casos revelan el diagnóstico: el repositorio es público
 game/sql/002_catalogos.sql
+game/sql/006_catalogos_2026-11.sql
+# Página temporal: solo se sube al servidor mientras se usa
+game/reprocesar_estadisticas.php
 # Imágenes: solo se registran las copias optimizadas que usa la web.
 # Los originales (grandes) se quedan en la computadora; al agregar una imagen nueva a la web, añadirla aquí.
 game/assets/img/*
